@@ -29,7 +29,7 @@ export const SUNEUNG_DATE = "2026-11-19";
 export const ALERT_BEFORE_MIN = 5;
 
 // 구글 시트 (출결 입력) — 학생 명단이 있으므로 ID는 소스에 넣지 않고 .env / GitHub Secret(VITE_SHEET_ID)로 주입
-export const SHEET_ID = import.meta.env.VITE_SHEET_ID || "";
+export const SHEET_ID = (typeof import.meta.env !== "undefined" && import.meta.env.VITE_SHEET_ID) || process?.env?.VITE_SHEET_ID || "";
 // 탭(gid)은 재배정반 교실 기준
 export const SHEET_TABS = {
   "3-1": 0,

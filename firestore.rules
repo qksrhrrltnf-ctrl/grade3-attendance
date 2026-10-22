@@ -1,0 +1,28 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 교사: 익명 인증(앱에서 자동). 관리자: 이메일 로그인 계정
+    function signedIn() { return request.auth != null; }
+    function isAdmin() { return signedIn() && request.auth.token.email == 'admin@g3-attendance.app'; }
+
+    match /config/{doc}    { allow read: if signedIn(); allow write: if isAdmin(); }
+    match /students/{sid}  { allow read: if signedIn(); allow write: if isAdmin(); }
+    match /teachers/{name} { allow read: if signedIn(); allow write: if isAdmin(); }
+    match /timetable/{doc} { allow read: if signedIn(); allow write: if isAdmin(); }
+
+    match /sessions/{id} {
+      allow read: if signedIn();
+      allow create, update: if signedIn()
+        && request.resource.data.keys().hasAll(['date', 'room', 'period', 'records'])
+        && request.resource.data.date is string
+        && request.resource.data.room is string
+        && request.resource.data.records is map;
+      allow delete: if isAdmin();
+    }
+    match /penalties/{id} {
+      allow read: if signedIn();
+      allow create: if signedIn() && request.resource.data.points is number;
+      allow update, delete: if isAdmin();
+    }
+  }
+}

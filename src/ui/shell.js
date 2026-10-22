@@ -7,6 +7,7 @@ const NAV = [
   { path: "today", label: "오늘", icon: "house" },
   { path: "timetable", label: "시간표", icon: "calendar-days" },
   { path: "attendance", label: "출결", icon: "clipboard-check" },
+  { path: "board", label: "현황", icon: "layout-grid" },
   { path: "settings", label: "설정", icon: "settings" },
 ];
 

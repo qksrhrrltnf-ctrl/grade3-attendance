@@ -3,7 +3,7 @@ import { store } from "../lib/store.js";
 import {
   getDayInfo, teacherSlots, statusOf, nextDutyDay, fmtKoDate, fmtShortDate, clsLabel, timeLabel, parseISO, maxPeriodNo,
 } from "../lib/schedule.js";
-import { TERM, PENALTY_NOTICE, sheetUrl } from "../data/config.js";
+import { TERM, PENALTY_NOTICE } from "../data/config.js";
 import { icon, refreshIcons } from "../ui/icons.js";
 import { teacherPrompt, bindTeacherSelect, slotRow, emptyState } from "../ui/parts.js";
 
@@ -35,7 +35,7 @@ function build() {
     <div class="space-y-4 fade-in">
       ${hero(teacher, info, now, st)}
       ${mainCard(teacher, info, now, st)}
-      ${slots.length ? timeline(st) : ""}
+      ${slots.length ? timeline(st, info) : ""}
       ${notice()}
     </div>`;
 }
@@ -101,7 +101,7 @@ function mainCard(teacher, info, now, st) {
           <div class="block mt-4 h-3 w-full overflow-hidden bg-paper">
             <div class="h-full bg-ink transition-all" style="width:${pct.toFixed(0)}%"></div>
           </div>
-          <a href="${sheetUrl(current.cls)}" target="_blank" rel="noopener" class="btn btn-primary mt-4 w-full">${icon("clipboard-check")}출결 입력 (시트)</a>
+          <a href="#/session?date=${info.iso}&room=${current.cls}&period=${current.period.no}" class="btn btn-primary mt-4 w-full">${icon("clipboard-check")}출결 입력하기</a>
         </div>
       </section>`;
   }
@@ -141,12 +141,12 @@ function nextDuty(teacher, now) {
     </div>`;
 }
 
-function timeline(st) {
+function timeline(st, info) {
   return `
     <section class="card">
       <div class="lhead">${icon("clock")}오늘 감독 타임라인<span class="ml-auto text-xs font-semibold opacity-80">${st.done}/${st.list.length} 완료</span></div>
       <div class="divide-y-2 divide-line">
-        ${st.list.map((s) => slotRow(s, { withState: true })).join("")}
+        ${st.list.map((s) => slotRow(s, { withState: true, date: info.iso })).join("")}
       </div>
     </section>`;
 }

@@ -94,7 +94,7 @@ function mine() {
       ${header(info)}
       <section class="card">
         ${list.length
-          ? `<div class="divide-y-2 divide-line">${list.map((s) => slotRow(s, { withState: isToday })).join("")}</div>`
+          ? `<div class="divide-y-2 divide-line">${list.map((s) => slotRow(s, { withState: isToday, date: isToday ? getDayInfo().iso : null })).join("")}</div>`
           : emptyState("coffee", `${info.label}에는 배정된 감독이 없습니다.`)}
       </section>
     </div>`;

@@ -1,6 +1,5 @@
 // 여러 화면에서 공유하는 조각들
 import { allTeachers, clsLabel, timeLabel } from "../lib/schedule.js";
-import { sheetUrl } from "../data/config.js";
 import { store } from "../lib/store.js";
 import { icon } from "./icons.js";
 
@@ -49,8 +48,8 @@ export const periodBox = (no, size = "h-12 w-12") => `
     <span class="text-lg leading-tight">${no}</span>
   </div>`;
 
-/** 감독 슬롯 한 줄 (타임라인·시간표 공용) */
-export function slotRow(s, { withState = false, withLink = true } = {}) {
+/** 감독 슬롯 한 줄 (타임라인·시간표 공용). date 를 주면 출결 입력 링크가 붙음 */
+export function slotRow(s, { withState = false, date = null } = {}) {
   const state = withState && s.state ? s.state : null;
   const dim = state === "done" ? "opacity-55" : "";
   const live = state === "now" ? "bg-[color-mix(in_srgb,var(--yellow)_22%,var(--paper))]" : "";
@@ -65,7 +64,7 @@ export function slotRow(s, { withState = false, withLink = true } = {}) {
         </div>
         <div class="mt-0.5 text-xs font-medium text-ink-2">${s.period.label} · ${timeLabel(s.period)}</div>
       </div>
-      ${withLink ? `<a href="${sheetUrl(s.cls)}" target="_blank" rel="noopener" class="btn btn-sm shrink-0" title="구글 시트에서 출결 입력">${icon("file-spreadsheet", "w-4 h-4")}<span class="hidden sm:inline">시트</span></a>` : ""}
+      ${date ? `<a href="#/session?date=${date}&room=${s.cls}&period=${s.period.no}" class="btn btn-sm shrink-0 ${state === "now" || state === "soon" ? "btn-primary" : ""}" title="출결 입력">${icon("clipboard-check", "w-4 h-4")}<span class="hidden sm:inline">출결</span></a>` : ""}
     </div>`;
 }
 

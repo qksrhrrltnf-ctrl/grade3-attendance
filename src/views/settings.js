@@ -4,8 +4,8 @@ import { getDayInfo, teacherSlots, nextDutyDay } from "../lib/schedule.js";
 import { ALERT_BEFORE_MIN, TERM, sheetUrl } from "../data/config.js";
 import { notify, requestNotificationPermission, notificationState } from "../lib/alerts.js";
 import { icon, refreshIcons } from "../ui/icons.js";
-import { teacherSelect, bindTeacherSelect } from "../ui/parts.js";
 import { toast, modal } from "../ui/feedback.js";
+import { isAdmin, loginAdmin, logoutAdmin, logout } from "../lib/auth.js";
 
 const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
 const isStandalone = () => window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
@@ -17,9 +17,25 @@ export function settingsView(root) {
 
   root.innerHTML = `
     <div class="space-y-4 fade-in">
-      ${section("user-round", "담당 교사", `
-        ${teacherSelect()}
-        <p class="mt-2 text-xs font-medium text-ink-2">이 기기에만 저장됩니다. 다른 기기에서는 다시 선택해 주세요.</p>`)}
+      ${section("user-round", "로그인 정보", `
+        <div class="flex items-center justify-between gap-3">
+          <div><div class="text-xl font-bold"><span class="hl">${s.teacher || "-"}</span> 선생님</div>
+            <div class="mt-1 text-xs font-medium text-ink-2">${isAdmin() ? "관리자 모드 켜짐" : "교사 모드"} · 이 기기에 저장됨</div></div>
+          <button id="btn-logout" class="btn btn-sm">${icon("log-out", "w-3.5 h-3.5")}다른 이름으로</button>
+        </div>`)}
+
+      ${section("shield", "관리자 모드", isAdmin() ? `
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="chip chip-pink">${icon("check", "w-3 h-3")}관리자 로그인됨</span>
+          <a href="#/admin" class="btn btn-primary btn-sm">${icon("users", "w-3.5 h-3.5")}교사·학생 관리</a>
+          <a href="#/board" class="btn btn-sm">${icon("layout-grid", "w-3.5 h-3.5")}현황·내보내기</a>
+          <button id="btn-admin-off" class="btn btn-sm ml-auto">끄기</button>
+        </div>` : `
+        <form id="admin-form" class="flex gap-2">
+          <input type="password" class="field py-2 text-sm" placeholder="관리자 비밀번호" autocomplete="current-password" required />
+          <button class="btn btn-key shrink-0" type="submit">${icon("shield", "w-4 h-4")}켜기</button>
+        </form>
+        <p class="mt-2 text-xs font-medium text-ink-2">담임 배정, 학생 교실 이동, 출결 삭제·내보내기를 할 수 있습니다.</p>`)}
 
       ${section("monitor", "화면 테마", `
         <div class="seg w-full" id="theme-seg">
@@ -59,7 +75,14 @@ export function settingsView(root) {
         </div>`)}
     </div>`;
 
-  bindTeacherSelect(root);
+  root.querySelector("#btn-logout").addEventListener("click", async () => { await logout(); location.hash = "#/login"; });
+  root.querySelector("#admin-form")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const pw = e.target.querySelector("input").value;
+    try { await loginAdmin(pw); toast("관리자 모드가 켜졌습니다."); }
+    catch (err) { toast(err.code === "auth/invalid-credential" || err.code === "auth/wrong-password" ? "비밀번호가 올바르지 않습니다." : `실패: ${err.message}`); }
+  });
+  root.querySelector("#btn-admin-off")?.addEventListener("click", async () => { await logoutAdmin(); toast("관리자 모드를 껐습니다."); });
   root.querySelector("#theme-seg").addEventListener("click", (e) => {
     const b = e.target.closest("[data-theme]"); if (!b) return;
     store.set({ theme: b.dataset.theme });
@@ -90,7 +113,7 @@ export function settingsView(root) {
   });
   root.querySelector("#btn-reset").addEventListener("click", () => {
     modal({ iconName: "trash-2", tone: "warn", title: "설정을 초기화할까요?", body: "선택한 선생님·테마·알림 설정이 지워집니다.", confirmText: "초기화",
-      onConfirm: () => { store.set({ teacher: "", theme: "system", alerts: true }); toast("초기화되었습니다."); } });
+      onConfirm: async () => { await logout(); store.set({ theme: "system", alerts: true }); toast("초기화되었습니다."); location.hash = "#/login"; } });
   });
   refreshIcons(root);
 }
