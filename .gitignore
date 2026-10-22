@@ -1,0 +1,12 @@
+node_modules/
+dist/
+dev-dist/
+.env
+.env.*
+!.env.example
+.DS_Store
+Thumbs.db
+*.log
+
+# 원본 시간표(구글 시트 주소 포함) — 로컬 전용
+수능 전 감독 시간.html

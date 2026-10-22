@@ -1,0 +1,24 @@
+{
+  "name": "grade3-attendance",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "3학년 수능 전 자습 감독·출결 시스템 (PWA)",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "icons": "node scripts/make-icons.mjs",
+    "sync:timetable": "node scripts/extract-timetable.mjs"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "sharp": "^0.35.5",
+    "tailwindcss": "^4.3.3",
+    "vite": "^8.3.5",
+    "vite-plugin-pwa": "^2.0.0"
+  },
+  "dependencies": {
+    "lucide": "^1.61.0"
+  }
+}
