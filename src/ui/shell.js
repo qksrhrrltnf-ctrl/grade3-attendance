@@ -13,17 +13,16 @@ const NAV = [
 export function mountShell(app) {
   app.innerHTML = `
     <div class="min-h-dvh md:grid md:grid-cols-[15rem_1fr]">
-      <nav class="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur pb-[env(safe-area-inset-bottom)]
-                  dark:border-slate-800 dark:bg-slate-900/95
-                  md:static md:min-h-dvh md:border-t-0 md:border-r md:pb-0 md:bg-white md:dark:bg-slate-900" aria-label="주 메뉴">
-        <div class="hidden md:flex h-16 items-center gap-3 border-b border-slate-200 px-5 dark:border-slate-800">
-          <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-600 text-white shadow-md shadow-brand-600/20">${icon("clipboard-check", "w-5 h-5")}</div>
+      <nav class="fixed inset-x-0 bottom-0 z-40 border-t-2 border-line bg-paper pb-[env(safe-area-inset-bottom)]
+                  md:static md:min-h-dvh md:border-t-0 md:border-r-2 md:bg-bg md:pb-0" aria-label="주 메뉴">
+        <div class="hidden md:flex h-16 items-center gap-3 border-b-2 border-line px-5">
+          <div class="block mission flex h-9 w-9 items-center justify-center">${icon("clipboard-check", "w-5 h-5")}</div>
           <div class="leading-tight">
-            <div class="font-bold text-slate-900 dark:text-white">${APP_NAME}</div>
-            <div class="text-[11px] text-slate-500 dark:text-slate-400">수능 전 자습 감독</div>
+            <div class="font-bold">${APP_NAME}</div>
+            <div class="text-[11px] text-muted">수능 전 자습 감독</div>
           </div>
         </div>
-        <ul class="flex px-2 md:flex-col md:gap-1 md:p-3">
+        <ul class="flex gap-1 p-1.5 md:flex-col md:p-3">
           ${NAV.map((n) => `
             <li class="flex-1 md:flex-none">
               <a href="#/${n.path}" data-nav="${n.path}" class="nav-item" aria-current="false">
@@ -34,26 +33,26 @@ export function mountShell(app) {
       </nav>
 
       <div class="flex min-h-dvh flex-col">
-        <header class="sticky top-0 z-30 border-b border-slate-200 bg-white/90 pt-[env(safe-area-inset-top)] backdrop-blur dark:border-slate-800 dark:bg-slate-900/90">
+        <header class="sticky top-0 z-30 border-b-2 border-line bg-paper pt-[env(safe-area-inset-top)]">
           <div class="mx-auto flex h-14 w-full max-w-5xl items-center justify-between px-4">
             <div class="flex items-center gap-2.5 md:hidden">
-              <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600 text-white">${icon("clipboard-check", "w-4 h-4")}</div>
-              <div class="font-bold text-slate-900 dark:text-white">${APP_NAME}</div>
+              <div class="block mission flex h-8 w-8 items-center justify-center">${icon("clipboard-check", "w-4 h-4")}</div>
+              <div class="font-bold">${APP_NAME}</div>
             </div>
-            <div id="hdr-date" class="hidden md:block text-sm font-semibold text-slate-600 dark:text-slate-300"></div>
+            <div id="hdr-date" class="hidden md:block text-sm font-semibold text-ink-2"></div>
             <div class="flex items-center gap-2">
-              <span id="dday-pill" class="chip bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300 hidden"></span>
-              <span id="clock" class="rounded-lg bg-slate-100 px-2.5 py-1 text-sm font-bold tracking-wider text-brand-700 dark:bg-slate-800 dark:text-brand-300">--:--</span>
+              <span id="dday-pill" class="chip chip-gold hidden"></span>
+              <span id="clock" class="block prompt px-2.5 py-1 text-sm font-bold tracking-wider">--:--</span>
             </div>
           </div>
-          <div id="offline-banner" class="hidden bg-amber-500 px-4 py-1.5 text-center text-xs font-semibold text-white">
+          <div id="offline-banner" class="warn hidden px-4 py-1.5 text-center text-xs font-bold">
             오프라인 상태입니다 — 저장된 시간표를 표시 중
           </div>
         </header>
         <main id="main" class="mx-auto w-full max-w-5xl flex-1 px-4 pt-4 pb-28 md:pb-10"></main>
       </div>
     </div>
-    <div id="toasts" class="pointer-events-none fixed inset-x-0 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-50 flex flex-col items-center gap-2 px-4 md:inset-x-auto md:bottom-6 md:right-6 md:items-end"></div>
+    <div id="toasts" class="pointer-events-none fixed inset-x-0 bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-50 flex flex-col items-center gap-2 px-4 md:inset-x-auto md:bottom-6 md:right-6 md:items-end"></div>
     <div id="modal-root"></div>`;
 
   refreshIcons(app);

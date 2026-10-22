@@ -43,31 +43,32 @@ function build() {
 function hero(teacher, info, now, st) {
   const total = st.list.length;
   const remain = total - st.done;
-  const sub = info.special
-    ? `<span class="chip bg-amber-400/90 text-amber-950">${icon("star", "w-3 h-3")}${info.label}</span>`
+  const tag = info.special
+    ? `<span class="chip chip-yellow">${icon("star", "w-3 h-3")}${info.label}</span>`
     : info.assignments
-      ? `<span class="chip bg-white/20 text-white">${info.label} · ${maxPeriodNo(info.assignments)}교시</span>`
-      : `<span class="chip bg-white/20 text-white">${info.label}</span>`;
+      ? `<span class="kicker">${info.label} · ${maxPeriodNo(info.assignments)}교시</span>`
+      : `<span class="kicker">${info.label}</span>`;
   return `
-    <section class="rounded-2xl bg-gradient-to-br from-brand-600 to-brand-800 p-5 text-white shadow-md dark:from-brand-700 dark:to-brand-950">
-      <div class="flex items-center gap-2 text-xs text-brand-100">${fmtKoDate(now)} ${sub}</div>
-      <h2 class="mt-2 text-2xl font-bold tracking-tight">${teacher} <span class="text-base font-normal text-brand-100">선생님</span></h2>
-      <div class="mt-4 grid grid-cols-3 gap-2 text-center">
-        ${stat("오늘 감독", total ? `${total}교시` : "없음")}
-        ${stat("완료", `${st.done}`)}
-        ${stat("남음", `${remain}`)}
+    <section class="card">
+      <div class="p-5">
+        <div class="flex flex-wrap items-center gap-2 text-sm font-semibold text-ink-2">${fmtKoDate(now)} ${tag}</div>
+        <h2 class="mt-3 text-3xl font-bold tracking-tight"><span class="hl">${teacher}</span> <span class="text-lg font-medium">선생님</span></h2>
+        <div class="mt-4 grid grid-cols-3 gap-2 text-center">
+          ${stat("오늘 감독", total ? `${total}교시` : "없음", "mini-1")}
+          ${stat("완료", `${st.done}`, "mini-2")}
+          ${stat("남음", `${remain}`, "mini-3")}
+        </div>
       </div>
     </section>`;
 }
 
-const stat = (k, v) => `
-  <div class="rounded-xl border border-white/15 bg-white/10 px-2 py-2 backdrop-blur-sm">
-    <div class="text-[11px] text-brand-100">${k}</div>
-    <div class="text-lg font-black leading-tight">${v}</div>
+const stat = (k, v, fill) => `
+  <div class="block ${fill} px-2 py-2.5">
+    <div class="text-[11px] font-semibold">${k}</div>
+    <div class="text-xl font-bold leading-tight">${v}</div>
   </div>`;
 
 function mainCard(teacher, info, now, st) {
-  // 자습 기간 밖·주말
   if (!info.assignments) {
     let title, desc;
     if (info.iso > TERM.end) { title = "자습 감독 기간이 끝났습니다"; desc = "수고 많으셨습니다."; }
@@ -84,42 +85,39 @@ function mainCard(teacher, info, now, st) {
     const total = current.endMin - current.startMin;
     const pct = Math.min(100, Math.max(0, ((total - current.minutesLeft) / total) * 100));
     return `
-      <section class="card overflow-hidden border-emerald-200 dark:border-emerald-900">
-        <div class="flex items-center gap-2 bg-emerald-50 px-4 py-2 text-xs font-bold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
-          <span class="h-2 w-2 rounded-full bg-emerald-500 pulse-dot"></span>지금 감독 중
-        </div>
+      <section class="card">
+        <div class="lhead"><span class="h-2.5 w-2.5 rounded-full bg-yellow pulse-dot"></span>지금 감독 중</div>
         <div class="p-5">
           <div class="flex items-start justify-between gap-3">
             <div>
-              <div class="text-3xl font-black tracking-tight text-slate-900 dark:text-white">${clsLabel(current.cls)}</div>
-              <div class="mt-1 text-sm font-medium text-slate-500 dark:text-slate-400">${current.period.label}${current.period.sub ? ` (${current.period.sub})` : ""} · ${timeLabel(current.period)}</div>
+              <div class="text-3xl font-bold tracking-tight">${clsLabel(current.cls)}</div>
+              <div class="mt-1 text-sm font-semibold text-ink-2">${current.period.label}${current.period.sub ? ` (${current.period.sub})` : ""} · ${timeLabel(current.period)}</div>
             </div>
-            <div class="rounded-xl bg-slate-100 px-3 py-2 text-center dark:bg-slate-800">
-              <div class="text-[11px] text-slate-500 dark:text-slate-400">종료까지</div>
-              <div class="text-xl font-black text-emerald-600 dark:text-emerald-400">${current.minutesLeft}분</div>
+            <div class="block key px-3 py-2 text-center">
+              <div class="text-[11px] font-semibold">종료까지</div>
+              <div class="text-2xl font-bold leading-tight">${current.minutesLeft}분</div>
             </div>
           </div>
-          <div class="mt-4 h-2 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-            <div class="h-full rounded-full bg-emerald-500 transition-all" style="width:${pct.toFixed(0)}%"></div>
+          <div class="block mt-4 h-3 w-full overflow-hidden bg-paper">
+            <div class="h-full bg-ink transition-all" style="width:${pct.toFixed(0)}%"></div>
           </div>
-          <div class="mt-4 flex gap-2">
-            <a href="${sheetUrl(current.cls)}" target="_blank" rel="noopener" class="btn btn-primary flex-1">${icon("clipboard-check")}출결 입력 (시트)</a>
-          </div>
+          <a href="${sheetUrl(current.cls)}" target="_blank" rel="noopener" class="btn btn-primary mt-4 w-full">${icon("clipboard-check")}출결 입력 (시트)</a>
         </div>
       </section>`;
   }
   if (next) {
+    const soon = next.state === "soon";
     return `
-      <section class="card p-5">
-        <div class="flex items-center gap-2 text-xs font-bold text-brand-600 dark:text-brand-400">${icon("timer")}다음 감독</div>
-        <div class="mt-2 flex items-end justify-between gap-3">
+      <section class="card">
+        <div class="lhead">${icon("timer")}다음 감독</div>
+        <div class="flex items-end justify-between gap-3 p-5">
           <div>
-            <div class="text-2xl font-black tracking-tight text-slate-900 dark:text-white">${clsLabel(next.cls)}</div>
-            <div class="mt-1 text-sm font-medium text-slate-500 dark:text-slate-400">${next.period.label}${next.period.sub ? ` (${next.period.sub})` : ""} · ${timeLabel(next.period)}</div>
+            <div class="text-2xl font-bold tracking-tight">${clsLabel(next.cls)}</div>
+            <div class="mt-1 text-sm font-semibold text-ink-2">${next.period.label}${next.period.sub ? ` (${next.period.sub})` : ""} · ${timeLabel(next.period)}</div>
           </div>
-          <div class="text-right">
-            <div class="text-[11px] text-slate-500 dark:text-slate-400">시작까지</div>
-            <div class="text-2xl font-black ${next.state === "soon" ? "text-amber-600 dark:text-amber-400" : "text-brand-600 dark:text-brand-400"}">${fmtDuration(next.minutesUntil)}</div>
+          <div class="block ${soon ? "warn" : "mission"} px-3 py-2 text-center">
+            <div class="text-[11px] font-semibold">시작까지</div>
+            <div class="text-2xl font-bold leading-tight">${fmtDuration(next.minutesUntil)}</div>
           </div>
         </div>
       </section>`;
@@ -135,22 +133,19 @@ function nextDuty(teacher, now) {
   const n = nextDutyDay(teacher, now);
   if (!n) return "";
   return `
-    <div class="border-t border-slate-100 p-4 dark:border-slate-800">
-      <div class="mb-2 flex items-center gap-1.5 text-xs font-bold text-slate-500 dark:text-slate-400">${icon("calendar-clock", "w-3.5 h-3.5")}다음 감독일 · ${fmtShortDate(n.date)}${n.info.special ? ` <span class="chip bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">${n.info.label}</span>` : ""}</div>
+    <div class="border-t-2 border-line p-4">
+      <div class="mb-2 flex flex-wrap items-center gap-1.5 text-xs font-bold">${icon("calendar-clock", "w-3.5 h-3.5")}다음 감독일 · ${fmtShortDate(n.date)}${n.info.special ? ` <span class="chip chip-yellow">${n.info.label}</span>` : ""}</div>
       <div class="flex flex-wrap gap-1.5">
-        ${n.slots.map((s) => `<span class="chip bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">${s.period.label} ${clsLabel(s.cls)}</span>`).join("")}
+        ${n.slots.map((s) => `<span class="chip">${s.period.label} ${clsLabel(s.cls)}</span>`).join("")}
       </div>
     </div>`;
 }
 
 function timeline(st) {
   return `
-    <section class="card overflow-hidden">
-      <div class="flex items-center justify-between border-b border-slate-100 px-4 py-3 dark:border-slate-800">
-        <h3 class="flex items-center gap-2 font-bold text-slate-800 dark:text-slate-200">${icon("clock", "w-4 h-4 text-brand-600")}오늘 감독 타임라인</h3>
-        <span class="text-xs text-slate-500 dark:text-slate-400">${st.done}/${st.list.length} 완료</span>
-      </div>
-      <div class="divide-y divide-slate-100 dark:divide-slate-800">
+    <section class="card">
+      <div class="lhead">${icon("clock")}오늘 감독 타임라인<span class="ml-auto text-xs font-semibold opacity-80">${st.done}/${st.list.length} 완료</span></div>
+      <div class="divide-y-2 divide-line">
         ${st.list.map((s) => slotRow(s, { withState: true })).join("")}
       </div>
     </section>`;
@@ -158,7 +153,7 @@ function timeline(st) {
 
 function notice() {
   return `
-    <div class="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
+    <div class="block key flex items-start gap-2 p-3 text-xs font-semibold">
       ${icon("triangle-alert", "mt-0.5 h-4 w-4 shrink-0")}<span>${PENALTY_NOTICE}을 부과해 주세요.</span>
     </div>`;
 }

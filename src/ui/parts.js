@@ -12,7 +12,7 @@ export function teacherSelect(id = "teacher-select") {
         <option value="">선생님 이름을 선택하세요</option>
         ${allTeachers().map((t) => `<option value="${t}" ${t === cur ? "selected" : ""}>${t}</option>`).join("")}
       </select>
-      ${icon("chevron-down", "pointer-events-none absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400")}
+      ${icon("chevron-down", "pointer-events-none absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2")}
     </div>`;
 }
 
@@ -23,52 +23,58 @@ export function bindTeacherSelect(root, id = "teacher-select") {
 /** 교사 미선택 안내 카드 */
 export function teacherPrompt() {
   return `
-    <section class="card p-6 sm:p-10 text-center space-y-4 fade-in">
-      <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-brand-50 text-brand-600 dark:bg-slate-800 dark:text-brand-400">${icon("user-round", "w-8 h-8")}</div>
-      <div>
-        <h3 class="text-lg font-bold text-slate-900 dark:text-white">담당 선생님을 선택해 주세요</h3>
-        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">한 번 선택하면 이 기기에 저장되어 다음부터 바로 내 일정이 열립니다.</p>
+    <section class="card fade-in">
+      <div class="p-6 sm:p-10 text-center space-y-4">
+        <div class="block mission mx-auto flex h-16 w-16 items-center justify-center">${icon("user-round", "w-8 h-8")}</div>
+        <div>
+          <h3 class="text-xl font-bold">담당 <span class="hl">선생님</span>을 선택해 주세요</h3>
+          <p class="mt-2 text-sm text-ink-2">한 번 선택하면 이 기기에 저장되어 다음부터 바로 내 일정이 열립니다.</p>
+        </div>
+        <div class="mx-auto max-w-sm text-left">${teacherSelect()}</div>
       </div>
-      <div class="mx-auto max-w-sm text-left">${teacherSelect()}</div>
     </section>`;
 }
 
 export const STATE_CHIP = {
-  done: `<span class="chip bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400">${icon("check", "w-3 h-3")}완료</span>`,
-  now: `<span class="chip bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300"><span class="h-1.5 w-1.5 rounded-full bg-emerald-500 pulse-dot"></span>진행 중</span>`,
-  soon: `<span class="chip bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">${icon("bell-ring", "w-3 h-3")}곧 시작</span>`,
-  upcoming: `<span class="chip bg-brand-50 text-brand-700 dark:bg-brand-950/50 dark:text-brand-300">예정</span>`,
+  done: `<span class="chip chip-muted">${icon("check", "w-3 h-3")}완료</span>`,
+  now: `<span class="chip chip-yellow"><span class="h-2 w-2 rounded-full bg-black pulse-dot"></span>진행 중</span>`,
+  soon: `<span class="chip chip-red">${icon("bell-ring", "w-3 h-3")}곧 시작</span>`,
+  upcoming: `<span class="chip chip-pink">예정</span>`,
 };
+
+/** 교시 번호 박스 — 핑크/옐로/골드 순환 */
+export const periodBox = (no, size = "h-12 w-12") => `
+  <div class="block mini-${((no - 1) % 3) + 1} flex ${size} shrink-0 flex-col items-center justify-center font-bold">
+    <span class="text-[10px] font-semibold leading-none">교시</span>
+    <span class="text-lg leading-tight">${no}</span>
+  </div>`;
 
 /** 감독 슬롯 한 줄 (타임라인·시간표 공용) */
 export function slotRow(s, { withState = false, withLink = true } = {}) {
   const state = withState && s.state ? s.state : null;
-  const dim = state === "done" ? "opacity-60" : "";
-  const live = state === "now" ? "bg-emerald-50/60 dark:bg-emerald-950/20" : "";
+  const dim = state === "done" ? "opacity-55" : "";
+  const live = state === "now" ? "bg-[color-mix(in_srgb,var(--yellow)_22%,var(--paper))]" : "";
   return `
     <div class="flex items-center gap-3 p-4 ${dim} ${live}">
-      <div class="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-xl border border-brand-100 bg-brand-50 font-bold text-brand-700 dark:border-brand-800 dark:bg-brand-950/50 dark:text-brand-300">
-        <span class="text-[10px] font-medium text-brand-500 dark:text-brand-400">교시</span>
-        <span class="text-base leading-none">${s.period.no}</span>
-      </div>
+      ${periodBox(s.period.no)}
       <div class="min-w-0 flex-1">
         <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <span class="text-base font-bold text-slate-900 dark:text-white">${clsLabel(s.cls)}</span>
-          ${s.period.sub ? `<span class="chip bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">${s.period.sub}</span>` : ""}
+          <span class="text-base font-bold">${clsLabel(s.cls)}</span>
+          ${s.period.sub ? `<span class="chip">${s.period.sub}</span>` : ""}
           ${state ? STATE_CHIP[state] : ""}
         </div>
-        <div class="mt-0.5 text-xs font-medium text-slate-500 dark:text-slate-400">${s.period.label} · ${timeLabel(s.period)}</div>
+        <div class="mt-0.5 text-xs font-medium text-ink-2">${s.period.label} · ${timeLabel(s.period)}</div>
       </div>
-      ${withLink ? `<a href="${sheetUrl(s.cls)}" target="_blank" rel="noopener" class="btn btn-ghost btn-sm shrink-0" title="구글 시트에서 출결 입력">${icon("file-spreadsheet", "w-4 h-4")}<span class="hidden sm:inline">시트</span></a>` : ""}
+      ${withLink ? `<a href="${sheetUrl(s.cls)}" target="_blank" rel="noopener" class="btn btn-sm shrink-0" title="구글 시트에서 출결 입력">${icon("file-spreadsheet", "w-4 h-4")}<span class="hidden sm:inline">시트</span></a>` : ""}
     </div>`;
 }
 
 export function emptyState(iconName, title, desc = "") {
   return `
-    <div class="p-8 text-center text-slate-500 dark:text-slate-400">
-      ${icon(iconName, "mx-auto mb-2 h-8 w-8 text-slate-300 dark:text-slate-600")}
-      <p class="font-semibold text-slate-700 dark:text-slate-300">${title}</p>
-      ${desc ? `<p class="mt-1 text-xs">${desc}</p>` : ""}
+    <div class="p-8 text-center">
+      <div class="block key mx-auto mb-3 flex h-12 w-12 items-center justify-center">${icon(iconName, "h-6 w-6")}</div>
+      <p class="font-bold">${title}</p>
+      ${desc ? `<p class="mt-1 text-xs text-ink-2">${desc}</p>` : ""}
     </div>`;
 }
 

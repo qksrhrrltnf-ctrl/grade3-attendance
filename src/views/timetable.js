@@ -19,18 +19,18 @@ export function timetableView(root) {
   root.innerHTML = `
     <div class="space-y-4 fade-in">
       <section class="no-print space-y-3">
-        <div class="-mx-4 flex gap-2 overflow-x-auto px-4 no-scrollbar" id="day-chips">
-          ${DAY_ORDER.map((k) => `<button class="day-chip" data-day="${k}">${DAY_LABELS[k]} <span class="opacity-70">${maxPeriodNo(REGULAR[k])}교시</span></button>`).join("")}
-          ${specialDayKeys().map((k) => `<button class="day-chip special" data-day="${k}">${icon("star", "w-3 h-3 mr-1 inline")}${specialDayLabel(k)}</button>`).join("")}
+        <div class="-mx-4 flex gap-2 overflow-x-auto px-4 py-0.5 no-scrollbar" id="day-chips">
+          ${DAY_ORDER.map((k) => `<button class="day-chip" data-day="${k}">${DAY_LABELS[k]} <span class="text-xs font-medium opacity-70">${maxPeriodNo(REGULAR[k])}교시</span></button>`).join("")}
+          ${specialDayKeys().map((k) => `<button class="day-chip special" data-day="${k}">${icon("star", "w-3.5 h-3.5")}${specialDayLabel(k)}</button>`).join("")}
         </div>
         <div class="flex flex-wrap items-center justify-between gap-2">
           <div class="seg" id="mode-seg">
-            <button data-mode="mine" ${store.get().teacher ? "" : "disabled"}>${icon("user-round", "w-4 h-4 mr-1 inline")}내 일정</button>
-            <button data-mode="all">${icon("layout-grid", "w-4 h-4 mr-1 inline")}전체</button>
+            <button data-mode="mine" ${store.get().teacher ? "" : "disabled"}>${icon("user-round", "w-4 h-4 mr-1")}내 일정</button>
+            <button data-mode="all">${icon("layout-grid", "w-4 h-4 mr-1")}전체</button>
           </div>
           <div class="flex items-center gap-2">
-            <button id="btn-copy" class="btn btn-ghost btn-sm">${icon("copy", "w-3.5 h-3.5")}복사</button>
-            <button id="btn-print" class="btn btn-ghost btn-sm">${icon("printer", "w-3.5 h-3.5")}인쇄</button>
+            <button id="btn-copy" class="btn btn-sm">${icon("copy", "w-3.5 h-3.5")}복사</button>
+            <button id="btn-print" class="btn btn-sm">${icon("printer", "w-3.5 h-3.5")}인쇄</button>
           </div>
         </div>
       </section>
@@ -76,12 +76,10 @@ export function timetableView(root) {
 function header(info) {
   const t = store.get().teacher;
   return `
-    <div class="flex items-center justify-between gap-2 px-1">
-      <h3 class="flex items-center gap-2 text-base font-bold text-slate-800 dark:text-slate-200">
-        ${icon(info.special ? "star" : "calendar-days", `w-4 h-4 ${info.special ? "text-amber-500" : "text-brand-600"}`)}
-        ${info.label} <span class="text-xs font-semibold text-slate-500">총 ${maxPeriodNo(info.assignments)}교시</span>
-      </h3>
-      ${ui.mode === "mine" && t ? `<span class="text-xs font-semibold text-brand-600 dark:text-brand-400">${t} 선생님</span>` : ""}
+    <div class="lhead lhead-standalone">
+      ${icon(info.special ? "star" : "calendar-days", "w-4 h-4")}
+      ${info.label} <span class="text-xs font-semibold opacity-80">총 ${maxPeriodNo(info.assignments)}교시</span>
+      ${ui.mode === "mine" && t ? `<span class="ml-auto rounded-[3px] bg-pink px-2 py-0.5 text-xs font-bold text-black">${t} 선생님</span>` : ""}
     </div>`;
 }
 
@@ -94,9 +92,9 @@ function mine() {
   return `
     <div class="space-y-3">
       ${header(info)}
-      <section class="card overflow-hidden">
+      <section class="card">
         ${list.length
-          ? `<div class="divide-y divide-slate-100 dark:divide-slate-800">${list.map((s) => slotRow(s, { withState: isToday })).join("")}</div>`
+          ? `<div class="divide-y-2 divide-line">${list.map((s) => slotRow(s, { withState: isToday })).join("")}</div>`
           : emptyState("coffee", `${info.label}에는 배정된 감독이 없습니다.`)}
       </section>
     </div>`;
@@ -107,10 +105,10 @@ function all() {
   return `
     <div class="space-y-3">
       ${header(info)}
-      ${store.get().teacher ? "" : `<div class="card p-4 no-print">${teacherSelect()}</div>`}
+      ${store.get().teacher ? "" : `<div class="card"><div class="p-4">${teacherSelect()}</div></div>`}
       <div class="relative no-print">
         <input id="tt-search" type="search" value="${ui.query}" placeholder="교사명 또는 반 검색 (예: 김영웅, 3-4)" class="field pl-10 py-2.5 text-sm" autocomplete="off" />
-        ${icon("search", "absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400")}
+        ${icon("search", "absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2")}
       </div>
       <div id="all-results">${allResults()}</div>
     </div>`;
@@ -121,16 +119,14 @@ function allResults() {
   const me = store.get().teacher;
   const q = ui.query.toLowerCase();
   const periods = periodsOf(info.assignments);
-  const cell = (teacher, cls) => {
-    const isMe = me && teacher === me;
-    const hit = q && (teacher.toLowerCase().includes(q) || cls.includes(q));
-    const cls_ = isMe ? "bg-brand-50 text-brand-700 font-bold ring-1 ring-brand-400 dark:bg-brand-950/60 dark:text-brand-300"
-      : hit ? "bg-amber-100 text-amber-900 font-bold dark:bg-amber-900/50 dark:text-amber-200" : "";
-    return { isMe, hit, cls_ };
+  const cellCls = (teacher, cls) => {
+    if (me && teacher === me) return "bg-pink text-black font-bold";
+    if (q && (teacher.toLowerCase().includes(q) || cls.includes(q))) return "bg-yellow text-black font-bold";
+    return "";
   };
 
   // 모바일: 반별 카드 (4교시 점심 전/후 교사가 같으면 한 줄로)
-  const cards = CLASSES.map((cls) => {
+  const cards = CLASSES.map((cls, idx) => {
     const merged = [];
     for (const p of periods) {
       const t = info.assignments[p.key][cls] || "-";
@@ -139,38 +135,36 @@ function allResults() {
         merged[merged.length - 1] = { p: { ...prev.p, key: "4", sub: undefined, segments: [prev.p, p] }, t };
       } else merged.push({ p, t });
     }
-    const rows = merged.map(({ p, t }) => {
-      const c = cell(t, cls);
-      return `<li class="flex items-center justify-between px-3 py-2 text-sm rounded-lg ${c.cls_}">
-        <span class="text-slate-500 dark:text-slate-400"><b class="text-slate-700 dark:text-slate-200">${p.label}</b>${p.sub ? ` <span class="text-[11px]">${p.sub}</span>` : ""} <span class="text-[11px]">${timeLabel(p)}</span></span>
-        <span class="font-semibold">${t}</span></li>`;
-    });
+    const rows = merged.map(({ p, t }) => `
+      <li class="flex items-center justify-between gap-2 px-3 py-2 text-sm ${cellCls(t, cls)}">
+        <span class="text-ink-2"><b class="text-ink">${p.label}</b>${p.sub ? ` <span class="text-[11px]">${p.sub}</span>` : ""} <span class="text-[11px]">${timeLabel(p)}</span></span>
+        <span class="font-semibold">${t}</span></li>`);
     const mineCount = periods.filter((p) => me && info.assignments[p.key][cls] === me).length;
     return `
-      <section class="card overflow-hidden">
-        <div class="flex items-center justify-between border-b border-slate-100 px-4 py-2.5 dark:border-slate-800">
-          <span class="font-bold text-slate-900 dark:text-white">${clsLabel(cls)}</span>
-          ${mineCount ? `<span class="chip bg-brand-50 text-brand-700 dark:bg-brand-950/50 dark:text-brand-300">내 감독 ${mineCount}</span>` : ""}
+      <section class="card">
+        <div class="flex items-center justify-between border-b-2 border-line px-4 py-2.5 mini-${(idx % 3) + 1}">
+          <span class="font-bold">${clsLabel(cls)}</span>
+          ${mineCount ? `<span class="chip">내 감독 ${mineCount}</span>` : ""}
         </div>
-        <ul class="p-1.5">${rows.join("")}</ul>
+        <ul class="divide-y divide-line/20">${rows.join("")}</ul>
       </section>`;
   });
 
   // 데스크톱: 그리드
   const table = `
     <section class="card overflow-x-auto">
-      <table class="w-full text-sm">
-        <thead class="bg-slate-100 text-xs font-bold uppercase text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+      <table class="tbl w-full text-sm">
+        <thead class="text-xs font-bold uppercase">
           <tr><th class="px-3 py-3 text-center">교시</th><th class="px-3 py-3 text-center">시간</th>
             ${CLASSES.map((c) => `<th class="px-2 py-3 text-center">${c}</th>`).join("")}</tr>
         </thead>
-        <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+        <tbody class="divide-y-2 divide-line">
           ${periods.map((p) => `
-            <tr class="hover:bg-slate-50/80 dark:hover:bg-slate-800/50">
-              <td class="px-3 py-2.5 text-center font-bold text-brand-700 dark:text-brand-400">${p.label}${p.sub ? `<div class="text-[10px] font-medium text-slate-500">${p.sub}</div>` : ""}</td>
-              <td class="px-3 py-2.5 text-center text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap">${timeLabel(p)}</td>
-              ${CLASSES.map((cls) => { const t = info.assignments[p.key][cls] || "-"; const c = cell(t, cls);
-                return `<td class="px-1 py-1.5 text-center"><span class="inline-block w-full rounded-lg px-2 py-1.5 font-medium ${c.cls_}">${t}</span></td>`; }).join("")}
+            <tr>
+              <td class="px-3 py-2.5 text-center font-bold">${p.label}${p.sub ? `<div class="text-[10px] font-medium text-ink-2">${p.sub}</div>` : ""}</td>
+              <td class="px-3 py-2.5 text-center text-xs font-semibold text-ink-2 whitespace-nowrap">${timeLabel(p)}</td>
+              ${CLASSES.map((cls) => { const t = info.assignments[p.key][cls] || "-";
+                return `<td class="px-1 py-1.5 text-center"><span class="inline-block w-full rounded-[4px] px-2 py-1.5 font-medium ${cellCls(t, cls)}">${t}</span></td>`; }).join("")}
             </tr>`).join("")}
         </tbody>
       </table>

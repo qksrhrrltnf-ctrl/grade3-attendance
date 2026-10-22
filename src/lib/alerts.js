@@ -33,7 +33,7 @@ export function notify(teacher, s, { test = false } = {}) {
   const title = test ? "알림 테스트" : `자습 감독 ${Math.max(1, s.minutesUntil ?? ALERT_BEFORE_MIN)}분 전!`;
   const detail = `${s.period.label} (${timeLabel(s.period)}) · ${clsLabel(s.cls)}`;
   modal({
-    iconName: "bell-ring", tone: "amber", title,
+    iconName: "bell-ring", tone: "mission", title,
     body: `${teacher} 선생님, 잠시 후 자습 감독 시간이 시작됩니다. 감독 교실로 이동해 주세요.`,
     detail,
   });
