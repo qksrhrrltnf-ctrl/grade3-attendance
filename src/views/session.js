@@ -8,7 +8,8 @@ import {
 } from "../lib/db.js";
 import { isAdmin, ensureAuth } from "../lib/auth.js";
 import { icon, refreshIcons } from "../ui/icons.js";
-import { toast, modal } from "../ui/feedback.js";
+import { toast } from "../ui/feedback.js";
+import { confetti, haptic } from "../ui/effects.js";
 
 export function sessionView(root, params) {
   const { date, room, period } = params;
@@ -30,7 +31,12 @@ export function sessionView(root, params) {
   let dirty = false, saving = false, loaded = false;
   let unsub = null;
 
-  root.innerHTML = `<div class="p-8 text-center text-sm font-semibold text-muted">불러오는 중…</div>`;
+  root.innerHTML = `
+    <div class="space-y-3">
+      <div class="skel h-12 w-full"></div>
+      <div class="flex gap-2">${"<div class='skel h-8 w-24'></div>".repeat(3)}</div>
+      <div class="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6">${"<div class='skel h-[4.5rem]'></div>".repeat(12)}</div>
+    </div>`;
 
   if (!isConfigured) {
     root.innerHTML = `<div class="block warn p-4 text-sm font-bold">DB가 연결되지 않아 출결 입력을 사용할 수 없습니다.</div>`;
@@ -64,7 +70,7 @@ export function sessionView(root, params) {
       const st = r?.s ?? "present";
       const meta = STATUS[st];
       return `
-        <button type="button" ${canEdit ? `data-sid="${s.sid}"` : "disabled"} class="block ${meta.cls} relative flex min-h-[4.5rem] flex-col items-start justify-between p-2 text-left transition-colors select-none disabled:cursor-default"
+        <button type="button" ${canEdit ? `data-sid="${s.sid}"` : "disabled"} class="block tile ${meta.cls} flex min-h-[4.5rem] flex-col items-start justify-between p-2 text-left select-none disabled:cursor-default"
           aria-label="${s.name} ${meta.label}">
           <span class="flex w-full items-center justify-between text-[11px] font-semibold opacity-80"><span>${s.origClass.replace("3-", "")}반 ${s.number}번</span>${prevAbsent.has(s.sid) ? `<span class="rounded-[3px] bg-black px-1 text-[9px] text-white">전교시 결석</span>` : ""}</span>
           <span class="text-base font-bold leading-tight">${s.name}</span>
@@ -123,13 +129,14 @@ export function sessionView(root, params) {
     if (!canEdit) return;
     const grid = root.querySelector("#grid");
     if (grid) {
-      let timer = null, longPressed = false;
+      let timer = null, longPressed = false, holding = null;
       const start = (e) => {
         const b = e.target.closest("[data-sid]"); if (!b) return;
         longPressed = false;
-        timer = setTimeout(() => { longPressed = true; openDetail(b.dataset.sid); }, 500);
+        holding = b; b.classList.add("holding");
+        timer = setTimeout(() => { longPressed = true; b.classList.remove("holding"); haptic(20); openDetail(b.dataset.sid); }, 500);
       };
-      const cancel = () => { clearTimeout(timer); timer = null; };
+      const cancel = () => { clearTimeout(timer); timer = null; holding?.classList.remove("holding"); holding = null; };
       grid.addEventListener("pointerdown", start);
       grid.addEventListener("pointerup", cancel);
       grid.addEventListener("pointerleave", cancel, true);
@@ -138,6 +145,7 @@ export function sessionView(root, params) {
       grid.addEventListener("click", (e) => {
         const b = e.target.closest("[data-sid]"); if (!b || longPressed) return;
         cycle(b.dataset.sid);
+        root.querySelector(`[data-sid="${b.dataset.sid}"]`)?.classList.add("tapped");
       });
     }
     root.querySelector("#all-present")?.addEventListener("click", () => {
@@ -153,7 +161,7 @@ export function sessionView(root, params) {
     if (next === "present") delete records[sid]; else records[sid] = { ...(records[sid] ?? {}), s: next };
     if (records[sid] && !records[sid].note) delete records[sid].note;
     dirty = true;
-    try { navigator.vibrate?.(10); } catch { /* ignore */ }
+    haptic(10);
     draw();
   }
 
@@ -222,8 +230,10 @@ export function sessionView(root, params) {
       }, me);
       dirty = false;
       const sum = summarize({ records });
-      toast(sum.absent ? `제출 완료 · 결석 ${sum.absent}명` : "제출 완료 · 전원 출석");
-      try { navigator.vibrate?.([30, 40, 30]); } catch { /* ignore */ }
+      const parts = [sum.absent && `결석 ${sum.absent}`, sum.late && `지각 ${sum.late}`, sum.leave && `조퇴 ${sum.leave}`, sum.excused && `사유 ${sum.excused}`].filter(Boolean);
+      toast(parts.length ? `제출 완료 · ${parts.join(" · ")}` : "제출 완료 · 전원 출석 🎉");
+      haptic([30, 40, 30]);
+      const btn = root.querySelector("#submit"); if (btn) confetti(btn, parts.length ? 14 : 28);
     } catch (e) {
       toast(`저장 실패: ${e.message}`);
     } finally { saving = false; draw(); }

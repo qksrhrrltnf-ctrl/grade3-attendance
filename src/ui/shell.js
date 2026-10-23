@@ -1,7 +1,10 @@
-// 앱 셸: 헤더 + 하단 탭(모바일) / 사이드바(데스크톱) + 본문 컨테이너
+// 앱 셸: 헤더(이름·로그아웃) + 하단 탭(모바일) / 사이드바(데스크톱) + 본문 컨테이너
 import { APP_NAME } from "../data/config.js";
 import { dday, fmtKoDate } from "../lib/schedule.js";
+import { store } from "../lib/store.js";
+import { logout } from "../lib/auth.js";
 import { icon, refreshIcons } from "./icons.js";
+import { modal } from "./feedback.js";
 
 const NAV = [
   { path: "today", label: "오늘", icon: "house" },
@@ -35,15 +38,19 @@ export function mountShell(app) {
 
       <div class="flex min-h-dvh flex-col">
         <header class="sticky top-0 z-30 border-b-2 border-line bg-paper pt-[env(safe-area-inset-top)]">
-          <div class="mx-auto flex h-14 w-full max-w-5xl items-center justify-between px-4">
-            <div class="flex items-center gap-2.5 md:hidden">
-              <div class="block mission flex h-8 w-8 items-center justify-center">${icon("clipboard-check", "w-4 h-4")}</div>
-              <div class="font-bold">${APP_NAME}</div>
+          <div class="mx-auto flex h-14 w-full max-w-5xl items-center justify-between gap-2 px-3 sm:px-4">
+            <div class="flex min-w-0 items-center gap-2 md:hidden">
+              <div class="block mission flex h-8 w-8 shrink-0 items-center justify-center">${icon("clipboard-check", "w-4 h-4")}</div>
+              <div class="truncate font-bold">${APP_NAME}</div>
             </div>
             <div id="hdr-date" class="hidden md:block text-sm font-semibold text-ink-2"></div>
-            <div class="flex items-center gap-2">
+            <div class="flex shrink-0 items-center gap-1.5 sm:gap-2">
               <span id="dday-pill" class="chip chip-gold hidden"></span>
-              <span id="clock" class="block prompt px-2.5 py-1 text-sm font-bold tracking-wider">--:--</span>
+              <span id="clock" class="block prompt px-2 py-1 text-sm font-bold tracking-wider">--:--</span>
+              <div id="hdr-user" class="hidden items-center gap-1">
+                <span id="hdr-name" class="chip chip-pink hidden sm:inline-flex"></span>
+                <button id="btn-logout-hdr" class="btn btn-sm px-2" title="로그아웃" aria-label="로그아웃">${icon("log-out", "w-4 h-4")}</button>
+              </div>
             </div>
           </div>
           <div id="offline-banner" class="warn hidden px-4 py-1.5 text-center text-xs font-bold">
@@ -59,7 +66,29 @@ export function mountShell(app) {
   refreshIcons(app);
   startClock();
   watchNetwork();
+  syncUser();
+  store.subscribe(syncUser);
+  app.querySelector("#btn-logout-hdr").addEventListener("click", () => {
+    const { teacher, role } = store.get();
+    modal({
+      iconName: "log-out", tone: "mission", title: "로그아웃할까요?",
+      body: `${teacher} 선생님${role === "admin" ? " (관리자 모드)" : ""} — 다음에 이름을 다시 입력합니다.`,
+      confirmText: "로그아웃",
+      onConfirm: async () => { await logout(); location.hash = "#/login"; },
+    });
+  });
   return { main: app.querySelector("#main") };
+}
+
+function syncUser() {
+  const { teacher, role } = store.get();
+  const box = document.getElementById("hdr-user");
+  const name = document.getElementById("hdr-name");
+  box.classList.toggle("hidden", !teacher);
+  box.classList.toggle("flex", Boolean(teacher));
+  name.textContent = role === "admin" ? `${teacher} · 관리자` : teacher;
+  name.classList.toggle("chip-pink", role !== "admin");
+  name.classList.toggle("chip-yellow", role === "admin");
 }
 
 function startClock() {
@@ -68,7 +97,8 @@ function startClock() {
   const pill = document.getElementById("dday-pill");
   const tick = () => {
     const now = new Date();
-    clock.textContent = now.toTimeString().slice(0, 8);
+    const t = now.toTimeString().slice(0, 8);
+    clock.innerHTML = `${t.slice(0, 5)}<span class="hidden sm:inline">${t.slice(5)}</span>`;
     date.textContent = fmtKoDate(now);
     const d = dday(undefined, now);
     if (d >= 0) {

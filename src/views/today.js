@@ -1,43 +1,62 @@
-// 오늘 화면: 지금 교시 · 다음 감독 · 오늘 타임라인
+// 오늘 화면: 지금 교시(초 단위 카운트다운) · 다음 감독 · 오늘 타임라인
 import { store } from "../lib/store.js";
 import {
-  getDayInfo, teacherSlots, statusOf, nextDutyDay, fmtKoDate, fmtShortDate, clsLabel, timeLabel, parseISO, maxPeriodNo,
+  getDayInfo, teacherSlots, statusOf, nextDutyDay, fmtKoDate, fmtShortDate, clsLabel, timeLabel, parseISO, maxPeriodNo, nowMin,
 } from "../lib/schedule.js";
 import { TERM, PENALTY_NOTICE } from "../data/config.js";
 import { icon, refreshIcons } from "../ui/icons.js";
 import { teacherPrompt, bindTeacherSelect, slotRow, emptyState } from "../ui/parts.js";
+import { countUp } from "../ui/effects.js";
 
 export function todayView(root) {
-  let last = "";
+  let sig = "";
   const draw = () => {
-    const html = build();
-    if (html === last) return;
-    last = html;
-    root.innerHTML = html;
-    bindTeacherSelect(root);
-    refreshIcons(root);
+    const { teacher } = store.get();
+    if (!teacher) { root.innerHTML = teacherPrompt(); bindTeacherSelect(root); refreshIcons(root); return; }
+    const now = new Date();
+    const info = getDayInfo(now);
+    const st = statusOf(teacherSlots(info.assignments, teacher));
+    // 상태(현재/다음 슬롯·완료 수)가 바뀔 때만 전체를 다시 그리고, 그 사이엔 숫자만 갱신
+    const s = `${info.iso}|${st.current?.period.key ?? ""}|${st.next?.period.key ?? ""}|${st.done}|${st.list.length}`;
+    if (s !== sig) {
+      sig = s;
+      root.innerHTML = build(teacher, info, now, st);
+      refreshIcons(root);
+      countUp(root);
+    }
+    tick(root, st);
   };
   draw();
-  const timer = setInterval(draw, 15_000);
+  const timer = setInterval(draw, 1000);
   return () => clearInterval(timer);
 }
 
-function build() {
-  const { teacher } = store.get();
-  if (!teacher) return teacherPrompt();
-
-  const now = new Date();
-  const info = getDayInfo(now);
-  const slots = teacherSlots(info.assignments, teacher);
-  const st = statusOf(slots);
-
+function build(teacher, info, now, st) {
   return `
     <div class="space-y-4 fade-in">
       ${hero(teacher, info, now, st)}
       ${mainCard(teacher, info, now, st)}
-      ${slots.length ? timeline(st, info) : ""}
+      ${st.list.length ? timeline(st, info) : ""}
       ${notice()}
     </div>`;
+}
+
+/** 초 단위 갱신: 종료까지 mm:ss, 진행 바, 시작까지 */
+function tick(root, st) {
+  const now = nowMin();
+  const { current, next } = st;
+  if (current) {
+    const secs = Math.max(0, Math.round((current.endMin - now) * 60));
+    const el = root.querySelector("[data-left]");
+    if (el) { const t = fmtClock(secs); if (el.textContent !== t) { el.textContent = t; el.classList.remove("tick"); void el.offsetWidth; el.classList.add("tick"); } }
+    const total = current.endMin - current.startMin;
+    const bar = root.querySelector("[data-bar]");
+    if (bar) bar.style.width = `${Math.min(100, Math.max(0, ((now - current.startMin) / total) * 100)).toFixed(1)}%`;
+  } else if (next) {
+    const secs = Math.max(0, Math.round((next.startMin - now) * 60));
+    const el = root.querySelector("[data-until]");
+    if (el) el.textContent = secs < 3600 ? fmtClock(secs) : fmtDuration(Math.ceil(secs / 60));
+  }
 }
 
 function hero(teacher, info, now, st) {
@@ -54,18 +73,18 @@ function hero(teacher, info, now, st) {
         <div class="flex flex-wrap items-center gap-2 text-sm font-semibold text-ink-2">${fmtKoDate(now)} ${tag}</div>
         <h2 class="mt-3 text-3xl font-bold tracking-tight"><span class="hl">${teacher}</span> <span class="text-lg font-medium">선생님</span></h2>
         <div class="mt-4 grid grid-cols-3 gap-2 text-center">
-          ${stat("오늘 감독", total ? `${total}교시` : "없음", "mini-1")}
-          ${stat("완료", `${st.done}`, "mini-2")}
-          ${stat("남음", `${remain}`, "mini-3")}
+          ${stat("오늘 감독", total, "교시", "mini-1")}
+          ${stat("완료", st.done, "", "mini-2")}
+          ${stat("남음", remain, "", "mini-3")}
         </div>
       </div>
     </section>`;
 }
 
-const stat = (k, v, fill) => `
+const stat = (k, v, suffix, fill) => `
   <div class="block ${fill} px-2 py-2.5">
     <div class="text-[11px] font-semibold">${k}</div>
-    <div class="text-xl font-bold leading-tight">${v}</div>
+    <div class="text-xl font-bold leading-tight" data-count="${v}" data-suffix="${suffix}">0${suffix}</div>
   </div>`;
 
 function mainCard(teacher, info, now, st) {
@@ -82,8 +101,6 @@ function mainCard(teacher, info, now, st) {
 
   const { current, next } = st;
   if (current) {
-    const total = current.endMin - current.startMin;
-    const pct = Math.min(100, Math.max(0, ((total - current.minutesLeft) / total) * 100));
     return `
       <section class="card">
         <div class="lhead"><span class="h-2.5 w-2.5 rounded-full bg-yellow pulse-dot"></span>지금 감독 중</div>
@@ -95,11 +112,11 @@ function mainCard(teacher, info, now, st) {
             </div>
             <div class="block key px-3 py-2 text-center">
               <div class="text-[11px] font-semibold">종료까지</div>
-              <div class="text-2xl font-bold leading-tight">${current.minutesLeft}분</div>
+              <div class="text-2xl font-bold leading-tight tabular-nums" data-left>--:--</div>
             </div>
           </div>
           <div class="block mt-4 h-3 w-full overflow-hidden bg-paper">
-            <div class="h-full bg-ink transition-all" style="width:${pct.toFixed(0)}%"></div>
+            <div class="bar h-full bg-ink" data-bar style="width:0%"></div>
           </div>
           <a href="#/session?date=${info.iso}&room=${current.cls}&period=${current.period.no}" class="btn btn-primary mt-4 w-full">${icon("clipboard-check")}출결 입력하기</a>
         </div>
@@ -117,7 +134,7 @@ function mainCard(teacher, info, now, st) {
           </div>
           <div class="block ${soon ? "warn" : "mission"} px-3 py-2 text-center">
             <div class="text-[11px] font-semibold">시작까지</div>
-            <div class="text-2xl font-bold leading-tight">${fmtDuration(next.minutesUntil)}</div>
+            <div class="text-2xl font-bold leading-tight tabular-nums" data-until>${fmtDuration(next.minutesUntil)}</div>
           </div>
         </div>
       </section>`;
@@ -158,6 +175,7 @@ function notice() {
     </div>`;
 }
 
+const fmtClock = (secs) => `${String(Math.floor(secs / 60)).padStart(2, "0")}:${String(secs % 60).padStart(2, "0")}`;
 function fmtDuration(min) {
   if (min < 60) return `${min}분`;
   const h = Math.floor(min / 60), m = min % 60;

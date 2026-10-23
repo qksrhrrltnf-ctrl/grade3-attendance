@@ -8,6 +8,7 @@ import { REGULAR } from "../data/timetable.js";
 import { icon, refreshIcons } from "../ui/icons.js";
 import { slotRow, emptyState, copyText, teacherSelect, bindTeacherSelect } from "../ui/parts.js";
 import { toast } from "../ui/feedback.js";
+import { onSwipe, haptic } from "../ui/effects.js";
 
 const ui = { day: null, mode: "mine", query: "" };
 
@@ -38,9 +39,17 @@ export function timetableView(root) {
     </div>`;
 
   const body = root.querySelector("#tt-body");
+  const DAYS = [...DAY_ORDER, ...specialDayKeys()];
+  let dir = 0;
   const redraw = () => {
-    root.querySelectorAll("[data-day]").forEach((b) => b.setAttribute("aria-pressed", b.dataset.day === ui.day));
+    root.querySelectorAll("[data-day]").forEach((b) => {
+      const on = b.dataset.day === ui.day;
+      b.setAttribute("aria-pressed", on);
+      if (on) b.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
+    });
     root.querySelectorAll("[data-mode]").forEach((b) => b.setAttribute("aria-pressed", b.dataset.mode === ui.mode));
+    body.className = dir > 0 ? "slide-left" : dir < 0 ? "slide-right" : "";
+    dir = 0;
     body.innerHTML = ui.mode === "mine" ? mine() : all();
     bindTeacherSelect(body);
     body.querySelector("#tt-search")?.addEventListener("input", (e) => {
@@ -53,7 +62,14 @@ export function timetableView(root) {
 
   root.querySelector("#day-chips").addEventListener("click", (e) => {
     const b = e.target.closest("[data-day]"); if (!b) return;
+    dir = DAYS.indexOf(b.dataset.day) > DAYS.indexOf(ui.day) ? 1 : -1;
     ui.day = b.dataset.day; redraw();
+  });
+  // 좌우 스와이프로 요일 이동
+  onSwipe(body, (d) => {
+    const i = DAYS.indexOf(ui.day) + d;
+    if (i < 0 || i >= DAYS.length) return;
+    dir = d; ui.day = DAYS[i]; haptic(8); redraw();
   });
   root.querySelector("#mode-seg").addEventListener("click", (e) => {
     const b = e.target.closest("[data-mode]"); if (!b || b.disabled) return;

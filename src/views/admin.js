@@ -1,6 +1,6 @@
 // 관리자: 교사 명단·담임 배정, 학생 교실 이동, 세션 삭제
 import { CLASSES } from "../data/config.js";
-import { allTeachers, clsLabel } from "../lib/schedule.js";
+import { allTeachers, clsLabel, getDayInfo, periodsOf } from "../lib/schedule.js";
 import { isConfigured } from "../lib/firebase.js";
 import { getTeachers, setTeacher, deleteTeacher, getStudents, updateStudent, invalidateStudents } from "../lib/db.js";
 import { isAdmin, ensureAuth } from "../lib/auth.js";
@@ -21,8 +21,23 @@ export function adminView(root) {
   function draw() {
     const missing = allTeachers().filter((n) => !teachers.some((t) => t.name === n));
     const hits = q ? students.filter((s) => s.name.includes(q) || s.sid.includes(q)).slice(0, 30) : [];
+    const today = getDayInfo();
+    const periods = [...new Set(periodsOf(today.assignments).map((p) => p.no))];
     root.innerHTML = `
       <div class="space-y-4 fade-in">
+        <section class="card">
+          <div class="lhead">${icon("clipboard-check")}다른 교실 출결 열기<span class="ml-auto text-xs font-semibold opacity-80">관리자 전용 · 대강·보강</span></div>
+          <div class="p-4">
+            ${periods.length ? `
+            <div class="flex gap-2">
+              <input id="o-date" type="date" class="field py-2 text-sm" value="${today.iso}" />
+              <select id="o-room" class="field py-2 text-sm">${CLASSES.map((c) => `<option value="${c}">${c} 교실</option>`).join("")}</select>
+              <select id="o-period" class="field py-2 text-sm">${periods.map((p) => `<option value="${p}">${p}교시</option>`).join("")}</select>
+              <button id="o-go" class="btn btn-key shrink-0">열기</button>
+            </div>` : `<p class="text-sm font-semibold">오늘은 자습 감독이 없는 날입니다. 현황 탭에서 날짜를 골라 셀을 눌러 여세요.</p>`}
+          </div>
+        </section>
+
         <section class="card">
           <div class="lhead">${icon("users")}교사 명단 · 담임 배정<span class="ml-auto text-xs font-semibold opacity-80">${teachers.length}명</span></div>
           ${missing.length ? `<div class="flex flex-wrap items-center gap-2 border-b-2 border-line p-3 text-xs font-semibold">
@@ -67,6 +82,10 @@ export function adminView(root) {
   }
 
   function bind() {
+    root.querySelector("#o-go")?.addEventListener("click", () => {
+      const date = root.querySelector("#o-date").value, room = root.querySelector("#o-room").value, period = root.querySelector("#o-period").value;
+      location.hash = `#/session?date=${date}&room=${room}&period=${period}`;
+    });
     root.querySelector("#add-missing")?.addEventListener("click", async () => {
       const missing = allTeachers().filter((n) => !teachers.some((t) => t.name === n));
       await Promise.all(missing.map((n) => setTeacher(n, { role: "teacher" })));

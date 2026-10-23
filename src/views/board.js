@@ -13,7 +13,7 @@ const ui = { date: null, mode: "rooms", cls: "3-1" };
 export function boardView(root) {
   if (!isConfigured) { root.innerHTML = `<div class="block warn p-4 text-sm font-bold">DB가 연결되지 않아 현황을 볼 수 없습니다.</div>`; return; }
   ui.date ??= fmtISO(new Date());
-  let sessions = [], students = [], unsub = null;
+  let sessions = [], students = [], unsub = null, loaded = false;
 
   const subscribe = () => { unsub?.(); unsub = subscribeDaySessions(ui.date, (list) => { sessions = list; draw(); }); };
   let gone = false;
@@ -29,6 +29,9 @@ export function boardView(root) {
     const d = parseISO(ui.date);
     const info = getDayInfo(d);
     const periods = [...new Set(periodsOf(info.assignments).map((p) => p.no))];
+    const loading = !loaded && !students.length;
+    if (!loading) loaded = true;
+    const skeleton = `<div class="space-y-2"><div class="skel h-12 w-full"></div>${"<div class='skel h-14 w-full'></div>".repeat(6)}</div>`;
     root.innerHTML = `
       <div class="space-y-4 fade-in">
         <div class="flex items-center justify-between gap-2">
@@ -42,7 +45,8 @@ export function boardView(root) {
             <button data-mode="class" aria-pressed="${ui.mode === "class"}">담임(원적)</button>
           </div>
         </div>
-        ${!info.assignments ? `<div class="card"><div class="p-6 text-center text-sm font-semibold">자습 감독이 없는 날입니다.</div></div>`
+        ${loading ? skeleton
+          : !info.assignments ? `<div class="card"><div class="p-6 text-center text-sm font-semibold">자습 감독이 없는 날입니다.</div></div>`
           : ui.mode === "rooms" ? rooms(periods) : byClass(periods)}
         ${isAdmin() ? exportBlock() : ""}
       </div>`;
@@ -69,7 +73,7 @@ export function boardView(root) {
                     const s = find(room, p);
                     const a = s ? summarize(s).absent : null;
                     const cls = !s ? "text-muted" : a ? "warn" : "key";
-                    return `<td class="p-1"><a href="#/session?date=${ui.date}&room=${room}&period=${p}" class="block ${s ? "block" : ""} ${cls} mx-auto flex h-9 w-11 items-center justify-center font-bold">${!s ? "–" : a || "✓"}</a></td>`;
+                    return `<td class="p-1"><a href="#/session?date=${ui.date}&room=${room}&period=${p}" class="block chip-tap ${cls} mx-auto flex h-9 w-11 items-center justify-center font-bold">${!s ? "–" : a || "✓"}</a></td>`;
                   }).join("")}
                   <td class="px-2 py-1.5 font-bold ${rowAbs ? "text-red" : ""}">${rowAbs}</td>
                 </tr>`;
