@@ -4,7 +4,7 @@ import { getDayInfo, fmtISO, fmtShortDate, parseISO, periodsOf, clsLabel } from 
 import { CLASSES, TERM } from "../data/config.js";
 import { isConfigured } from "../lib/firebase.js";
 import { subscribeDaySessions, getStudents, getSessionsBetween, summarize, STATUS, getTeacher } from "../lib/db.js";
-import { isAdmin } from "../lib/auth.js";
+import { isAdmin, ensureAuth } from "../lib/auth.js";
 import { icon, refreshIcons } from "../ui/icons.js";
 import { toast } from "../ui/feedback.js";
 
@@ -15,11 +15,15 @@ export function boardView(root) {
   ui.date ??= fmtISO(new Date());
   let sessions = [], students = [], unsub = null;
 
-  getTeacher(store.get().teacher).then((t) => { if (t?.homeroom && !ui._homeApplied) { ui.cls = t.homeroom; ui._homeApplied = true; draw(); } }).catch(() => {});
-  getStudents().then((s) => { students = s; draw(); }).catch((e) => toast(e.message));
-
   const subscribe = () => { unsub?.(); unsub = subscribeDaySessions(ui.date, (list) => { sessions = list; draw(); }); };
-  subscribe();
+  let gone = false;
+  ensureAuth().then(() => {
+    if (gone) return;
+    getTeacher(store.get().teacher).then((t) => { if (t?.homeroom && !ui._homeApplied) { ui.cls = t.homeroom; ui._homeApplied = true; draw(); } }).catch(() => {});
+    getStudents().then((s) => { students = s; draw(); }).catch((e) => toast(e.message));
+    subscribe();
+  });
+  draw();
 
   function draw() {
     const d = parseISO(ui.date);
@@ -151,5 +155,5 @@ export function boardView(root) {
     });
   }
 
-  return () => unsub?.();
+  return () => { gone = true; unsub?.(); };
 }

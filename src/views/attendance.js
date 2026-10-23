@@ -4,6 +4,7 @@ import { getDayInfo, teacherSlots, statusOf, clsLabel, timeLabel, fmtShortDate, 
 import { CLASSES } from "../data/config.js";
 import { isConfigured } from "../lib/firebase.js";
 import { subscribeDaySessions, summarize, sessionId } from "../lib/db.js";
+import { isAdmin, ensureAuth } from "../lib/auth.js";
 import { icon, refreshIcons } from "../ui/icons.js";
 import { emptyState, STATE_CHIP, periodBox } from "../ui/parts.js";
 
@@ -21,9 +22,10 @@ export function attendanceView(root) {
         <section class="card">
           <div class="lhead">${icon("clipboard-check")}오늘 내 출결 입력<span class="ml-auto text-xs font-semibold opacity-80">${fmtShortDate(now)}</span></div>
           ${st.list.length ? `<div class="divide-y-2 divide-line">${st.list.map(row).join("")}</div>`
-            : emptyState("coffee", info.assignments ? "오늘은 배정된 감독이 없습니다" : "오늘은 자습 감독이 없는 날입니다", "아래에서 다른 교실의 출결을 열 수 있어요.")}
+            : emptyState("coffee", info.assignments ? "오늘은 배정된 감독이 없습니다" : "오늘은 자습 감독이 없는 날입니다", isAdmin() ? "아래에서 다른 교실의 출결을 열 수 있어요." : "")}
         </section>
-        ${info.assignments ? otherRooms(info) : ""}
+        ${info.assignments && isAdmin() ? otherRooms(info) : ""}
+        ${isAdmin() ? "" : `<p class="px-1 text-xs font-medium text-muted">본인에게 배정된 교시·교실만 입력할 수 있습니다. 대강·변경은 관리자에게 요청하세요.</p>`}
       </div>`;
     refreshIcons(root);
   };
@@ -51,7 +53,7 @@ export function attendanceView(root) {
     const periods = periodsOf(info.assignments).filter((p) => p.key !== "4b");
     return `
       <section class="card">
-        <div class="lhead">${icon("layout-grid")}다른 교실 열기<span class="ml-auto text-xs font-semibold opacity-80">대강·보강 시</span></div>
+        <div class="lhead">${icon("layout-grid")}다른 교실 열기<span class="ml-auto text-xs font-semibold opacity-80">관리자 전용</span></div>
         <div class="p-4">
           <div class="flex gap-2">
             <select id="o-room" class="field">${CLASSES.map((c) => `<option value="${c}">${c} 교실</option>`).join("")}</select>
@@ -70,12 +72,15 @@ export function attendanceView(root) {
     }
   });
 
-  let unsub = null;
+  let unsub = null, gone = false;
   if (isConfigured) {
-    try { unsub = subscribeDaySessions(info.iso, (list) => { sessions = Object.fromEntries(list.map((s) => [s.id, s])); draw(); }); }
-    catch (e) { console.warn(e); }
+    ensureAuth().then(() => {
+      if (gone) return;
+      try { unsub = subscribeDaySessions(info.iso, (list) => { sessions = Object.fromEntries(list.map((s) => [s.id, s])); draw(); }); }
+      catch (e) { console.warn(e); }
+    });
   }
-  return () => unsub?.();
+  return () => { gone = true; unsub?.(); };
 }
 
 const noDb = () => `

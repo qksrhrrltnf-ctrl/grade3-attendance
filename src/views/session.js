@@ -6,7 +6,7 @@ import { isConfigured } from "../lib/firebase.js";
 import {
   sessionId, subscribeSession, saveSession, studentsOfRoom, getDaySessions, addPenalty, STATUS, STATUS_CYCLE, NOTE_PRESETS, summarize,
 } from "../lib/db.js";
-import { isAdmin } from "../lib/auth.js";
+import { isAdmin, ensureAuth } from "../lib/auth.js";
 import { icon, refreshIcons } from "../ui/icons.js";
 import { toast, modal } from "../ui/feedback.js";
 
@@ -20,6 +20,8 @@ export function sessionView(root, params) {
   const assigned = [...new Set(
     PERIODS.filter((p) => String(p.no) === String(period)).map((p) => dayInfo.assignments?.[p.key]?.[room]).filter(Boolean),
   )];
+  // 권한: 해당 교시·교실의 배정 교사 본인 또는 관리자만 입력. 그 외는 읽기 전용
+  const canEdit = isAdmin() || assigned.includes(me);
 
   let students = [];
   let session = null;          // DB 원본
@@ -37,6 +39,7 @@ export function sessionView(root, params) {
 
   (async () => {
     try {
+      await ensureAuth();
       students = await studentsOfRoom(room);
       const day = await getDaySessions(date);
       const prev = day.filter((s) => s.room === room && Number(s.period) < Number(period)).sort((a, b) => Number(b.period) - Number(a.period))[0];
@@ -61,7 +64,7 @@ export function sessionView(root, params) {
       const st = r?.s ?? "present";
       const meta = STATUS[st];
       return `
-        <button type="button" data-sid="${s.sid}" class="block ${meta.cls} relative flex min-h-[4.5rem] flex-col items-start justify-between p-2 text-left transition-colors select-none"
+        <button type="button" ${canEdit ? `data-sid="${s.sid}"` : "disabled"} class="block ${meta.cls} relative flex min-h-[4.5rem] flex-col items-start justify-between p-2 text-left transition-colors select-none disabled:cursor-default"
           aria-label="${s.name} ${meta.label}">
           <span class="flex w-full items-center justify-between text-[11px] font-semibold opacity-80"><span>${s.origClass.replace("3-", "")}반 ${s.number}번</span>${prevAbsent.has(s.sid) ? `<span class="rounded-[3px] bg-black px-1 text-[9px] text-white">전교시 결석</span>` : ""}</span>
           <span class="text-base font-bold leading-tight">${s.name}</span>
@@ -79,9 +82,16 @@ export function sessionView(root, params) {
           </div>
         </div>
 
+        ${canEdit ? "" : `
+          <div class="block warn flex items-start gap-2 p-3 text-sm font-bold">
+            ${icon("shield", "mt-0.5 h-4 w-4 shrink-0")}
+            <span>읽기 전용 — 이 교시는 <u>${assigned.length ? assigned.join("·") : "배정 없음"}</u> 선생님 담당입니다. 본인 배정 교시만 입력할 수 있습니다.</span>
+          </div>`}
+
         <div class="flex flex-wrap items-center gap-2 text-xs font-semibold">
           <span class="chip">${time}</span>
-          <span class="chip">감독 ${assigned.length ? assigned.join("·") : "-"}</span>
+          <span class="chip ${canEdit && !isAdmin() ? "chip-pink" : ""}">감독 ${assigned.length ? assigned.join("·") : "-"}${canEdit && !isAdmin() ? " (나)" : ""}</span>
+          ${isAdmin() ? `<span class="chip chip-pink">관리자</span>` : ""}
           ${session ? `<span class="chip chip-yellow">${icon("check", "w-3 h-3")}입력됨${session.updatedBy ? ` · ${session.updatedBy}` : ""}</span>` : `<span class="chip chip-muted">미입력</span>`}
           ${session?.source === "sheet" ? `<span class="chip">시트에서 가져옴</span>` : ""}
           ${prevAbsent.size ? `<span class="chip chip-red">전 교시 결석 ${prevAbsent.size}명</span>` : ""}
@@ -89,13 +99,13 @@ export function sessionView(root, params) {
 
         <div class="flex flex-wrap gap-1.5 text-[11px] font-semibold">
           ${Object.entries(STATUS).map(([k, v]) => `<span class="block ${v.cls} px-2 py-0.5">${v.label}</span>`).join("")}
-          <span class="text-muted self-center">· 탭하면 순서대로 바뀌고, 길게 누르면 사유·벌점</span>
+          ${canEdit ? `<span class="text-muted self-center">· 탭하면 순서대로 바뀌고, 길게 누르면 사유·벌점</span>` : ""}
         </div>
 
         ${students.length ? `<div class="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6" id="grid">${tiles}</div>`
           : `<div class="card"><div class="p-6 text-center text-sm font-semibold">이 교실의 학생 명단이 없습니다.</div></div>`}
 
-        <div class="fixed inset-x-0 bottom-[calc(4.25rem+env(safe-area-inset-bottom))] z-30 md:bottom-0 md:left-[15rem]">
+        <div class="fixed inset-x-0 bottom-[calc(4.25rem+env(safe-area-inset-bottom))] z-30 md:bottom-0 md:left-[15rem] ${canEdit ? "" : "hidden"}">
           <div class="mx-auto flex max-w-5xl items-center gap-2 border-t-2 border-line bg-paper p-3">
             <button id="all-present" class="btn btn-sm">${icon("users", "w-4 h-4")}전원 출석</button>
             <div class="ml-auto flex items-center gap-1.5 text-xs font-bold">
@@ -110,6 +120,7 @@ export function sessionView(root, params) {
   }
 
   function bind() {
+    if (!canEdit) return;
     const grid = root.querySelector("#grid");
     if (grid) {
       let timer = null, longPressed = false;
@@ -201,7 +212,7 @@ export function sessionView(root, params) {
   }
 
   async function submit() {
-    if (saving) return;
+    if (saving || !canEdit) return;
     if (session && !dirty) return toast("변경 사항이 없습니다.");
     saving = true; draw();
     try {

@@ -3,7 +3,7 @@ import { CLASSES } from "../data/config.js";
 import { allTeachers, clsLabel } from "../lib/schedule.js";
 import { isConfigured } from "../lib/firebase.js";
 import { getTeachers, setTeacher, deleteTeacher, getStudents, updateStudent, invalidateStudents } from "../lib/db.js";
-import { isAdmin } from "../lib/auth.js";
+import { isAdmin, ensureAuth } from "../lib/auth.js";
 import { icon, refreshIcons } from "../ui/icons.js";
 import { toast, modal } from "../ui/feedback.js";
 
@@ -13,7 +13,7 @@ export function adminView(root) {
   let teachers = [], students = [], q = "";
 
   const load = async () => {
-    try { [teachers, students] = await Promise.all([getTeachers(), getStudents()]); draw(); }
+    try { await ensureAuth(); [teachers, students] = await Promise.all([getTeachers(), getStudents()]); draw(); }
     catch (e) { toast(e.message); }
   };
   load();
