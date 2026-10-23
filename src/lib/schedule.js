@@ -12,15 +12,41 @@ const KO_DAYS = ["일", "월", "화", "수", "목", "금", "토"];
 export const fmtKoDate = (d) => `${d.getFullYear()}. ${pad(d.getMonth() + 1)}. ${pad(d.getDate())} (${KO_DAYS[d.getDay()]})`;
 export const fmtShortDate = (d) => `${d.getMonth() + 1}/${d.getDate()}(${KO_DAYS[d.getDay()]})`;
 
-/** 특정 날짜의 시간표 정보. 주말·기간 외는 assignments = null */
+/* ── 교체(대강) 덮어쓰기: key `${iso}_${room}_${periodNo}` → { teacher, original, swapId } ── */
+let overrides = {};
+export function setOverrides(map) { overrides = map || {}; }
+export function getOverride(iso, room, periodNo) { return overrides[`${iso}_${room}_${periodNo}`] ?? null; }
+export function overridesOn(iso) { return Object.entries(overrides).filter(([k]) => k.startsWith(`${iso}_`)).map(([, v]) => v); }
+
+/** 날짜의 원본 배정에 그날의 교체를 적용한 사본 */
+function withOverrides(assignments, iso) {
+  if (!assignments) return assignments;
+  const todays = Object.entries(overrides).filter(([k]) => k.startsWith(`${iso}_`));
+  if (!todays.length) return assignments;
+  const out = Object.fromEntries(Object.entries(assignments).map(([k, v]) => [k, { ...v }]));
+  for (const [key, o] of todays) {
+    const [, room, periodNo] = key.split("_");
+    for (const p of PERIODS) if (String(p.no) === periodNo && out[p.key]) out[p.key][room] = o.teacher;
+  }
+  return out;
+}
+
+/** 특정 날짜의 시간표 정보(교체 반영). 주말·기간 외는 assignments = null */
 export function getDayInfo(date = new Date()) {
   const iso = fmtISO(date);
   const special = SPECIAL_DAYS[iso];
-  if (special) return { iso, key: iso, label: special.label, special: true, assignments: special.periods, inTerm: true };
+  if (special) return { iso, key: iso, label: special.label, special: true, assignments: withOverrides(special.periods, iso), base: special.periods, inTerm: true };
   const key = DAY_KEYS[date.getDay()];
   const inTerm = iso >= TERM.start && iso <= TERM.end;
   if (!key) return { iso, key: null, label: "주말", special: false, assignments: null, inTerm };
-  return { iso, key, label: `${DAY_LABELS[key]}요일`, special: false, assignments: inTerm ? REGULAR[key] : null, inTerm, dayKey: key };
+  const base = inTerm ? REGULAR[key] : null;
+  return { iso, key, label: `${DAY_LABELS[key]}요일`, special: false, assignments: withOverrides(base, iso), base, inTerm, dayKey: key };
+}
+
+/** 교체 적용 전 원본 배정 교사 */
+export function originalTeacher(info, room, periodNo) {
+  const p = PERIODS.find((x) => String(x.no) === String(periodNo));
+  return p && info.base ? info.base[p.key]?.[room] ?? null : null;
 }
 
 /** 시간표 화면용: "mon".."fri" 또는 특별일 ISO 키로 조회 */

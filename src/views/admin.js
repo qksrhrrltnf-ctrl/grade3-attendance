@@ -1,6 +1,8 @@
 // 관리자: 교사 명단·담임 배정, 학생 교실 이동, 세션 삭제
 import { CLASSES } from "../data/config.js";
-import { allTeachers, clsLabel, getDayInfo, periodsOf } from "../lib/schedule.js";
+import { allTeachers, clsLabel, getDayInfo, periodsOf, originalTeacher } from "../lib/schedule.js";
+import { swaps, assignSubstitute, cancelSwap } from "../lib/swaps.js";
+import { store } from "../lib/store.js";
 import { isConfigured } from "../lib/firebase.js";
 import { getTeachers, setTeacher, deleteTeacher, getStudents, updateStudent, invalidateStudents } from "../lib/db.js";
 import { isAdmin, ensureAuth } from "../lib/auth.js";
@@ -36,6 +38,33 @@ export function adminView(root) {
               <button id="o-go" class="btn btn-key col-span-2 sm:col-span-1">${icon("arrow-right", "w-4 h-4")}열기</button>
             </div>` : `<p class="text-sm font-semibold">오늘은 자습 감독이 없는 날입니다. 현황 탭에서 날짜를 골라 셀을 눌러 여세요.</p>`}
           </div>
+        </section>
+
+        <section class="card">
+          <div class="lhead">${icon("arrow-left-right")}대강 지정<span class="ml-auto text-xs font-semibold opacity-80">요청 없이 바로 교체</span></div>
+          <div class="p-4">
+            <div class="grid grid-cols-2 gap-2 sm:grid-cols-[1fr_1fr_1fr_1fr_auto]">
+              <input id="s-date" type="date" class="field col-span-2 py-2 text-sm sm:col-span-1" value="${today.iso}" />
+              <select id="s-room" class="field py-2 text-sm">${CLASSES.map((c) => `<option value="${c}">${c} 교실</option>`).join("")}</select>
+              <select id="s-period" class="field py-2 text-sm">${[1, 2, 3, 4, 5, 6, 7].map((p) => `<option value="${p}">${p}교시</option>`).join("")}</select>
+              <select id="s-to" class="field col-span-2 py-2 text-sm sm:col-span-1">${allTeachers().map((t) => `<option value="${t}">${t}</option>`).join("")}</select>
+              <button id="s-go" class="btn btn-primary col-span-2 sm:col-span-1">${icon("check", "w-4 h-4")}지정</button>
+            </div>
+            <p class="mt-2 text-xs font-medium text-ink-2">그 교시의 입력 권한·오늘 화면·알림이 지정한 선생님께 넘어갑니다.</p>
+          </div>
+          ${swaps.list.length ? `
+          <div class="border-t-2 border-line">
+            <div class="px-4 pt-3 text-[11px] font-bold uppercase tracking-wider text-ink-2">진행 중·수락된 교체 ${swaps.list.length}</div>
+            <div class="divide-y divide-line/30">
+              ${swaps.list.map((s) => `
+                <div class="flex items-center gap-2 px-4 py-2 text-sm">
+                  <span class="font-bold">${s.date.slice(5).replace("-", "/")} ${s.period}교시 ${s.room}</span>
+                  <span class="text-xs text-ink-2">${s.from} → ${s.status === "accepted" ? `<b>${s.acceptedBy}</b>` : s.to ?? "누구나"}</span>
+                  <span class="chip ${s.status === "accepted" ? "chip-yellow" : "chip-muted"} ml-auto">${s.status === "accepted" ? "수락됨" : "대기"}</span>
+                  <button data-swap-cancel="${s.id}" class="btn btn-sm px-2 text-red" title="취소">${icon("circle-x", "w-4 h-4")}</button>
+                </div>`).join("")}
+            </div>
+          </div>` : ""}
         </section>
 
         <section class="card">
@@ -82,6 +111,18 @@ export function adminView(root) {
   }
 
   function bind() {
+    root.querySelector("#s-go")?.addEventListener("click", async () => {
+      const date = root.querySelector("#s-date").value, room = root.querySelector("#s-room").value, period = root.querySelector("#s-period").value, to = root.querySelector("#s-to").value;
+      const info = getDayInfo(new Date(date + "T00:00:00"));
+      const from = originalTeacher(info, room, period);
+      if (!from) return toast("그 날짜·교시·교실에는 배정이 없습니다.");
+      if (from === to) return toast("원래 담당 선생님과 같습니다.");
+      try { await assignSubstitute({ date, room, period, from, to, by: store.get().teacher }); toast(`${to} 선생님으로 대강 지정했습니다.`); setTimeout(draw, 400); }
+      catch (e) { toast(e.message); }
+    });
+    root.querySelectorAll("[data-swap-cancel]").forEach((b) => b.addEventListener("click", async () => {
+      try { await cancelSwap(b.dataset.swapCancel); toast("교체를 취소했습니다."); setTimeout(draw, 400); } catch (e) { toast(e.message); }
+    }));
     root.querySelector("#o-go")?.addEventListener("click", () => {
       const date = root.querySelector("#o-date").value, room = root.querySelector("#o-room").value, period = root.querySelector("#o-period").value;
       location.hash = `#/session?date=${date}&room=${room}&period=${period}`;

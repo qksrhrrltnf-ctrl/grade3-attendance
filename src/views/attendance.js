@@ -8,6 +8,7 @@ import { ensureAuth, isAdmin } from "../lib/auth.js";
 import { icon, refreshIcons } from "../ui/icons.js";
 import { emptyState, STATE_CHIP, periodBox } from "../ui/parts.js";
 import { haptic } from "../ui/effects.js";
+import { swapCard, bindSwapCard } from "./swapcard.js";
 
 const KO = ["일", "월", "화", "수", "목", "금", "토"];
 const cal = { month: null, selected: null }; // 탭을 오가도 유지
@@ -41,6 +42,8 @@ export function attendanceView(root) {
           ${st.list.length ? `<div class="divide-y-2 divide-line">${st.list.map((s) => row(s, todayIso, todaySessions, true)).join("")}</div>`
             : emptyState("coffee", today.assignments ? "오늘은 배정된 감독이 없습니다" : "오늘은 자습 감독이 없는 날입니다")}
         </section>
+
+        ${swapCard(teacher, todayIso)}
 
         <section class="card">
           <div class="lhead">${icon("calendar-days")}지난 출결 입력·수정<span class="ml-auto text-xs font-semibold opacity-80">날짜를 탭하세요</span></div>
@@ -140,6 +143,7 @@ export function attendanceView(root) {
   };
 
   function bind() {
+    bindSwapCard(root, teacher, draw);
     root.querySelectorAll("[data-month]").forEach((b) => b.addEventListener("click", () => {
       const [y, m] = cal.month.split("-").map(Number);
       const d = new Date(y, m - 1 + Number(b.dataset.month), 1);

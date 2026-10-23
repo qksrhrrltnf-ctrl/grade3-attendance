@@ -1,6 +1,7 @@
 // 교시별 출결 입력 화면: 학생 격자 탭 → 출석/결석/지각/조퇴, 길게 눌러 사유·벌점
 import { store } from "../lib/store.js";
-import { clsLabel, fmtShortDate, parseISO, getDayInfo } from "../lib/schedule.js";
+import { clsLabel, fmtShortDate, parseISO, getDayInfo, getOverride, originalTeacher, fmtISO } from "../lib/schedule.js";
+import { openRequestModal } from "./swapcard.js";
 import { PERIODS } from "../data/config.js";
 import { isConfigured } from "../lib/firebase.js";
 import {
@@ -21,8 +22,10 @@ export function sessionView(root, params) {
   const assigned = [...new Set(
     PERIODS.filter((p) => String(p.no) === String(period)).map((p) => dayInfo.assignments?.[p.key]?.[room]).filter(Boolean),
   )];
-  // 권한: 해당 교시·교실의 배정 교사 본인 또는 관리자만 입력. 그 외는 읽기 전용
+  // 권한: 해당 교시·교실의 배정 교사(교체 반영) 본인 또는 관리자만 입력. 그 외는 읽기 전용
   const canEdit = isAdmin() || assigned.includes(me);
+  const override = getOverride(date, room, String(period));
+  const original = override ? originalTeacher(dayInfo, room, period) : null;
 
   let students = [];
   let session = null;          // DB 원본
@@ -97,6 +100,8 @@ export function sessionView(root, params) {
         <div class="flex flex-wrap items-center gap-2 text-xs font-semibold">
           <span class="chip">${time}</span>
           <span class="chip ${canEdit && !isAdmin() ? "chip-pink" : ""}">감독 ${assigned.length ? assigned.join("·") : "-"}${canEdit && !isAdmin() ? " (나)" : ""}</span>
+          ${override ? `<span class="chip chip-gold">${icon("arrow-left-right", "w-3 h-3")}대강 · 원래 ${original ?? "-"}</span>` : ""}
+          ${canEdit && !isAdmin() && date >= fmtISO(new Date()) ? `<button id="btn-swap" class="chip chip-tap">${icon("arrow-left-right", "w-3 h-3")}교체 요청</button>` : ""}
           ${isAdmin() ? `<span class="chip chip-pink">관리자</span>` : ""}
           ${session ? `<span class="chip chip-yellow">${icon("check", "w-3 h-3")}입력됨${session.updatedBy ? ` · ${session.updatedBy}` : ""}</span>` : `<span class="chip chip-muted">미입력</span>`}
           ${session?.source === "sheet" ? `<span class="chip">시트에서 가져옴</span>` : ""}
@@ -148,6 +153,7 @@ export function sessionView(root, params) {
         root.querySelector(`[data-sid="${b.dataset.sid}"]`)?.classList.add("tapped");
       });
     }
+    root.querySelector("#btn-swap")?.addEventListener("click", () => openRequestModal(me, null, { date, room, period }));
     root.querySelector("#all-present")?.addEventListener("click", () => {
       records = {}; dirty = true; draw();
     });

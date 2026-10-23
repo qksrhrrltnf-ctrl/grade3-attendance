@@ -5,7 +5,7 @@ import {
   Bell, BellRing, BellOff, Moon, Sun, Monitor, Printer, Copy, Search, Coffee, CircleCheck, ChevronDown,
   ChevronRight, Share, SquarePlus, Download, Info, Table, LayoutGrid, TriangleAlert, Sparkles, X,
   Smartphone, ArrowRight, Check, WifiOff, RefreshCw, GraduationCap, Timer, Play, Flag, BookOpen,
-  FileSpreadsheet, CalendarClock, Trash2, Star, LogOut, Shield,
+  FileSpreadsheet, CalendarClock, Trash2, Star, LogOut, Shield, ArrowLeftRight, UserRoundPlus, CircleX, Inbox,
 } from "lucide";
 
 const icons = {
@@ -13,7 +13,7 @@ const icons = {
   Bell, BellRing, BellOff, Moon, Sun, Monitor, Printer, Copy, Search, Coffee, CircleCheck, ChevronDown,
   ChevronRight, Share, SquarePlus, Download, Info, Table, LayoutGrid, TriangleAlert, Sparkles, X,
   Smartphone, ArrowRight, Check, WifiOff, RefreshCw, GraduationCap, Timer, Play, Flag, BookOpen,
-  FileSpreadsheet, CalendarClock, Trash2, Star, LogOut, Shield,
+  FileSpreadsheet, CalendarClock, Trash2, Star, LogOut, Shield, ArrowLeftRight, UserRoundPlus, CircleX, Inbox,
 };
 
 export function refreshIcons(root = document) {

@@ -7,6 +7,7 @@ import { TERM, PENALTY_NOTICE } from "../data/config.js";
 import { icon, refreshIcons } from "../ui/icons.js";
 import { teacherPrompt, bindTeacherSelect, slotRow, emptyState } from "../ui/parts.js";
 import { countUp } from "../ui/effects.js";
+import { mySwaps } from "../lib/swaps.js";
 
 export function todayView(root) {
   let sig = "";
@@ -17,7 +18,8 @@ export function todayView(root) {
     const info = getDayInfo(now);
     const st = statusOf(teacherSlots(info.assignments, teacher));
     // 상태(현재/다음 슬롯·완료 수)가 바뀔 때만 전체를 다시 그리고, 그 사이엔 숫자만 갱신
-    const s = `${info.iso}|${st.current?.period.key ?? ""}|${st.next?.period.key ?? ""}|${st.done}|${st.list.length}`;
+    const sw = mySwaps(teacher, info.iso);
+    const s = `${info.iso}|${st.current?.period.key ?? ""}|${st.next?.period.key ?? ""}|${st.done}|${st.list.length}|${sw.incoming.length}|${sw.open.length}|${st.list.map((x) => x.cls).join()}`;
     if (s !== sig) {
       sig = s;
       root.innerHTML = build(teacher, info, now, st);
@@ -32,8 +34,16 @@ export function todayView(root) {
 }
 
 function build(teacher, info, now, st) {
+  const { incoming, open } = mySwaps(teacher, info.iso);
+  const pending = incoming.length + open.length;
   return `
     <div class="space-y-4 fade-in">
+      ${pending ? `
+        <a href="#/attendance" class="block mission row-tap flex items-center gap-3 p-3 text-sm font-bold">
+          ${icon("arrow-left-right", "w-5 h-5 shrink-0")}
+          <span class="flex-1">${incoming.length ? `나에게 온 교체 요청 ${incoming.length}건` : ""}${incoming.length && open.length ? " · " : ""}${open.length ? `도움 요청 ${open.length}건` : ""}</span>
+          <span class="chip">보기 ${icon("chevron-right", "w-3 h-3")}</span>
+        </a>` : ""}
       ${hero(teacher, info, now, st)}
       ${mainCard(teacher, info, now, st)}
       ${st.list.length ? timeline(st, info) : ""}

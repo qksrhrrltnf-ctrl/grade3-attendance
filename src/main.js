@@ -7,6 +7,7 @@ import { mountShell } from "./ui/shell.js";
 import { refreshIcons } from "./ui/icons.js";
 import { toast } from "./ui/feedback.js";
 import { startAlerts } from "./lib/alerts.js";
+import { startSwaps, onSwapsChange } from "./lib/swaps.js";
 import { loginView } from "./views/login.js";
 import { todayView } from "./views/today.js";
 import { timetableView } from "./views/timetable.js";
@@ -42,7 +43,9 @@ store.subscribe((_, patch) => {
   if ("teacher" in patch || "theme" in patch || "role" in patch) { rerender(main); refreshIcons(main); document.body.classList.toggle("is-admin", isAdmin()); }
 });
 draw();
-if (isLoggedIn()) ensureAuth();
+if (isLoggedIn()) ensureAuth().then(startSwaps);
+store.subscribe((_, patch) => { if ("teacher" in patch && patch.teacher) ensureAuth().then(startSwaps); });
+onSwapsChange(() => { rerender(main); refreshIcons(main); }); // 교체가 바뀌면 현재 화면 갱신
 startAlerts();
 
 // 설치 프롬프트 (Android/데스크톱 Chrome)

@@ -19,6 +19,15 @@ service cloud.firestore {
         && request.resource.data.records is map;
       allow delete: if isAdmin();
     }
+    match /swaps/{id} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && request.resource.data.keys().hasAll(['date', 'room', 'period', 'from', 'status'])
+        && request.resource.data.status in ['open', 'accepted'];
+      allow update: if signedIn()
+        && request.resource.data.status in ['open', 'accepted', 'declined', 'cancelled'];
+      allow delete: if isAdmin();
+    }
     match /penalties/{id} {
       allow read: if signedIn();
       allow create: if signedIn() && request.resource.data.points is number;
