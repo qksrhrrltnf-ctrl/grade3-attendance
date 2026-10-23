@@ -13,3 +13,5 @@ Thumbs.db
 
 # Firestore 시드(학생 명단·출결) — 로컬 전용
 seed/
+firebase-debug.log
+.firebase/

@@ -54,7 +54,7 @@ export function attendanceView(root) {
         <div class="lhead">${icon("layout-grid")}다른 교실 열기<span class="ml-auto text-xs font-semibold opacity-80">대강·보강 시</span></div>
         <div class="p-4">
           <div class="flex gap-2">
-            <select id="o-room" class="field">${CLASSES.map((c) => `<option value="${c}">${clsLabel(c)} 교실</option>`).join("")}</select>
+            <select id="o-room" class="field">${CLASSES.map((c) => `<option value="${c}">${c} 교실</option>`).join("")}</select>
             <select id="o-period" class="field">${periods.map((p) => `<option value="${p.no}">${p.label}</option>`).join("")}</select>
             <button id="o-go" class="btn btn-key shrink-0">열기</button>
           </div>
