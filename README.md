@@ -42,8 +42,19 @@ npm run sync:timetable
 
 ## 배포
 
-GitHub 저장소의 **Settings → Pages → Source**를 *GitHub Actions*로 설정하면
-`main`에 push할 때마다 자동 배포됩니다. 주소: `https://<계정>.github.io/<저장소>/`
+**운영 주소: https://qksrhrrltnf-ctrl.github.io/grade3-attendance/**
+
+`main`에 push하면 GitHub Actions가 빌드해 Pages에 자동 배포합니다.
+빌드에 필요한 값(`VITE_FIREBASE_*`, `VITE_SHEET_ID`, `VITE_ADMIN_EMAIL`)은 저장소 **Settings → Secrets and variables → Actions**에 등록되어 있습니다.
+Firebase 프로젝트: `bangok-g3-attendance` (Firestore 서울 리전). 규칙 배포는 `npx firebase deploy --only firestore:rules`.
+
+## 데이터 스크립트
+
+```bash
+node scripts/import-sheet.mjs            # 구글 시트 → seed/ (학생·세션 JSON)
+node scripts/seed-firestore.mjs          # seed/ → Firestore 업로드 (.env 의 ADMIN_PASSWORD 필요)
+node scripts/restore-session.mjs <id>    # 세션 하나를 시트 원본으로 되돌림
+```
 
 ## 로드맵
 
