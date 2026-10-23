@@ -29,11 +29,11 @@ export function adminView(root) {
           <div class="lhead">${icon("clipboard-check")}다른 교실 출결 열기<span class="ml-auto text-xs font-semibold opacity-80">관리자 전용 · 대강·보강</span></div>
           <div class="p-4">
             ${periods.length ? `
-            <div class="flex gap-2">
-              <input id="o-date" type="date" class="field py-2 text-sm" value="${today.iso}" />
+            <div class="grid grid-cols-2 gap-2 sm:grid-cols-[1fr_1fr_1fr_auto]">
+              <input id="o-date" type="date" class="field col-span-2 py-2 text-sm sm:col-span-1" value="${today.iso}" />
               <select id="o-room" class="field py-2 text-sm">${CLASSES.map((c) => `<option value="${c}">${c} 교실</option>`).join("")}</select>
               <select id="o-period" class="field py-2 text-sm">${periods.map((p) => `<option value="${p}">${p}교시</option>`).join("")}</select>
-              <button id="o-go" class="btn btn-key shrink-0">열기</button>
+              <button id="o-go" class="btn btn-key col-span-2 sm:col-span-1">${icon("arrow-right", "w-4 h-4")}열기</button>
             </div>` : `<p class="text-sm font-semibold">오늘은 자습 감독이 없는 날입니다. 현황 탭에서 날짜를 골라 셀을 눌러 여세요.</p>`}
           </div>
         </section>
